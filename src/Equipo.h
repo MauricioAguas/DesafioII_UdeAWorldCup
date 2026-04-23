@@ -22,7 +22,7 @@ public:
 
     void cargarJugadores();
     Jugador** seleccionarConvocados();
-    void actualizarEstadisticas();
+    void actualizarEstadisticas(int gf, int gc, int resultado);
     int getGFA();
     int getGEC();
     string getPais();

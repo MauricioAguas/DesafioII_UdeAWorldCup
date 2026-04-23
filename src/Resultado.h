@@ -15,13 +15,17 @@ private:
 
 public:
     Resultado();
+    Resultado(int gf1, int gf2, bool prorroga, Jugador** conv1, Jugador** conv2);
     ~Resultado();
 
     void calcularPosesion(int rankA, int rankB);
     Equipo* getGanador(Equipo* e1, Equipo* e2);
-    void actualizarHistoricos();
+    void actualizarHistoricos(Equipo* e1, Equipo* e2);
     int getGfEquipo1();
     int getGfEquipo2();
+    bool getHuboProrroga();
+    Jugador** getConvocados1();
+    Jugador** getConvocados2();
 };
 
 #endif
