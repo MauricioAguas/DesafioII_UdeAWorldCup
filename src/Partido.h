@@ -22,9 +22,16 @@ public:
     ~Partido();
 
     void simular();
+    void simularConProrroga(); // empate en eliminatorias -> prorroga sesgada por ranking
     float calcularGolesEsperados(Equipo* ataque, Equipo* defensa);
     void asignarGoleadores();
     void imprimirResumen();
+
+    // Getters necesarios para Grupo y Fase
+    Resultado* getResultado();
+    Equipo*    getEquipo1();
+    Equipo*    getEquipo2();
+    string     getFecha();
 
     friend ostream& operator<<(ostream& os, const Partido& p);
 };
