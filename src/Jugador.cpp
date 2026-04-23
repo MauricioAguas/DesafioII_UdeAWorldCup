@@ -3,32 +3,33 @@
 using namespace std;
 
 Jugador::Jugador() {
-    nombre = apellido = "";
+    nombre         = "";
+    apellido       = "";
     numeroCamiseta = 0;
-    estadisticas = new EstadisticasJugador();
+    estadisticas   = new EstadisticasJugador();
 }
 
-Jugador::Jugador(string nombre, string apellido, int numeroCamiseta) {
+// Req I: constructor con goles historicos iniciales
+// Los goles se cargan via actualizar(); el resto de stats inician en 0
+Jugador::Jugador(string nombre, string apellido, int numeroCamiseta, int golesIniciales) {
     this->nombre         = nombre;
     this->apellido       = apellido;
     this->numeroCamiseta = numeroCamiseta;
-    estadisticas = new EstadisticasJugador();
+    estadisticas         = new EstadisticasJugador();
+    if (golesIniciales > 0)
+        estadisticas->actualizar(golesIniciales, 0, 0, 0, 0);
 }
 
-Jugador::~Jugador() { delete estadisticas; }
-
-void Jugador::actualizarEstadisticas(int goles, int minutos, int amarillas, int rojas, int faltas) {
-    estadisticas->actualizar(goles, minutos, amarillas, rojas, faltas);
+Jugador::~Jugador() {
+    delete estadisticas;
 }
 
-int    Jugador::getGoles()         { return estadisticas->getGoles(); }
+string Jugador::getNombre()         { return nombre;         }
+string Jugador::getApellido()       { return apellido;       }
 int    Jugador::getNumeroCamiseta() { return numeroCamiseta; }
-string Jugador::getNombre()        { return nombre + " " + apellido; }
+EstadisticasJugador* Jugador::getEstadisticas() { return estadisticas; }
 
 ostream& operator<<(ostream& os, const Jugador& j) {
-    os << j.apellido << ", " << j.nombre
-       << " | Camiseta: " << j.numeroCamiseta
-       << " | Goles: "    << j.estadisticas->getGoles()
-       << " | Minutos: "  << j.estadisticas->getMinutos();
+    os << j.nombre << " " << j.apellido << " #" << j.numeroCamiseta;
     return os;
 }

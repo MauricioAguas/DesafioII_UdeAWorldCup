@@ -1,33 +1,38 @@
 #include "../include/EstadisticasEquipo.h"
 
 EstadisticasEquipo::EstadisticasEquipo() {
-    golesFavor = golesContra = ganados = empatados = perdidos = 0;
-    amarillas  = rojas = faltas = 0;
+    golesFavor  = 0;
+    golesContra = 0;
+    ganados     = 0;
+    empatados   = 0;
+    perdidos    = 0;
+    amarillas   = 0;
+    rojas       = 0;
+    faltas      = 0;
 }
-
-EstadisticasEquipo::~EstadisticasEquipo() {}
 
 void EstadisticasEquipo::actualizar(int gf, int gc, int resultado) {
     golesFavor  += gf;
     golesContra += gc;
-    if      (resultado ==  1) ganados++;
-    else if (resultado ==  0) empatados++;
-    else                      perdidos++;
+    if      (resultado > 0) ganados++;
+    else if (resultado == 0) empatados++;
+    else                     perdidos++;
 }
 
-int EstadisticasEquipo::getDiferenciaGoles() { return golesFavor - golesContra; }
-int EstadisticasEquipo::getGolesFavor()      { return golesFavor; }
-int EstadisticasEquipo::getGolesContra()     { return golesContra; }
+int EstadisticasEquipo::getGolesFavor()  { return golesFavor;  }
+int EstadisticasEquipo::getGolesContra() { return golesContra; }
+int EstadisticasEquipo::getGanados()     { return ganados;     }
+int EstadisticasEquipo::getEmpatados()   { return empatados;   }
+int EstadisticasEquipo::getPerdidos()    { return perdidos;    }
+int EstadisticasEquipo::getAmarillas()   { return amarillas;   }
+int EstadisticasEquipo::getRojas()       { return rojas;       }
+int EstadisticasEquipo::getFaltas()      { return faltas;      }
 
-EstadisticasEquipo EstadisticasEquipo::operator+(const EstadisticasEquipo& o) const {
-    EstadisticasEquipo r;
-    r.golesFavor  = golesFavor  + o.golesFavor;
-    r.golesContra = golesContra + o.golesContra;
-    r.ganados     = ganados     + o.ganados;
-    r.empatados   = empatados   + o.empatados;
-    r.perdidos    = perdidos    + o.perdidos;
-    r.amarillas   = amarillas   + o.amarillas;
-    r.rojas       = rojas       + o.rojas;
-    r.faltas      = faltas      + o.faltas;
-    return r;
-}
+void EstadisticasEquipo::setGolesFavor(int v)  { golesFavor  = v; }
+void EstadisticasEquipo::setGolesContra(int v) { golesContra = v; }
+void EstadisticasEquipo::setGanados(int v)     { ganados     = v; }
+void EstadisticasEquipo::setEmpatados(int v)   { empatados   = v; }
+void EstadisticasEquipo::setPerdidos(int v)    { perdidos    = v; }
+void EstadisticasEquipo::setAmarillas(int v)   { amarillas   = v; }
+void EstadisticasEquipo::setRojas(int v)       { rojas       = v; }
+void EstadisticasEquipo::setFaltas(int v)      { faltas      = v; }
