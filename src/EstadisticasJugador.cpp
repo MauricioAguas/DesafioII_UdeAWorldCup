@@ -1,42 +1,32 @@
-#include "EstadisticasJugador.h"
+#include "../include/EstadisticasJugador.h"
 
 EstadisticasJugador::EstadisticasJugador() {
-    partidosJugados = 0;
-    goles = 0;
-    minutosJugados = 0;
-    asistencias = 0;
-    amarillas = 0;
-    rojas = 0;
-    faltas = 0;
+    partidosJugados = goles = minutosJugados = asistencias = 0;
+    amarillas = rojas = faltas = 0;
 }
 
 EstadisticasJugador::~EstadisticasJugador() {}
 
-void EstadisticasJugador::actualizar(int g, int minutos, int am, int ro, int fa) {
-    partidosJugados++;
-    goles += g;
-    minutosJugados += minutos;
-    amarillas += am;
-    rojas += ro;
-    faltas += fa;
+void EstadisticasJugador::actualizar(int g, int min, int am, int ro, int fa) {
+    goles          += g;
+    minutosJugados += min;
+    amarillas      += am;
+    rojas          += ro;
+    faltas         += fa;
+    if (min > 0) partidosJugados++;
 }
 
-int EstadisticasJugador::getGoles() {
-    return goles;
-}
+int EstadisticasJugador::getGoles()   { return goles; }
+int EstadisticasJugador::getMinutos() { return minutosJugados; }
 
-int EstadisticasJugador::getMinutos() {
-    return minutosJugados;
-}
-
-EstadisticasJugador EstadisticasJugador::operator+(const EstadisticasJugador& otro) const {
-    EstadisticasJugador resultado;
-    resultado.partidosJugados = partidosJugados + otro.partidosJugados;
-    resultado.goles           = goles + otro.goles;
-    resultado.minutosJugados  = minutosJugados + otro.minutosJugados;
-    resultado.asistencias     = asistencias + otro.asistencias;
-    resultado.amarillas       = amarillas + otro.amarillas;
-    resultado.rojas           = rojas + otro.rojas;
-    resultado.faltas          = faltas + otro.faltas;
-    return resultado;
+EstadisticasJugador EstadisticasJugador::operator+(const EstadisticasJugador& o) const {
+    EstadisticasJugador r;
+    r.goles          = goles          + o.goles;
+    r.minutosJugados = minutosJugados + o.minutosJugados;
+    r.asistencias    = asistencias    + o.asistencias;
+    r.amarillas      = amarillas      + o.amarillas;
+    r.rojas          = rojas          + o.rojas;
+    r.faltas         = faltas         + o.faltas;
+    r.partidosJugados= partidosJugados+ o.partidosJugados;
+    return r;
 }

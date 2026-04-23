@@ -1,9 +1,12 @@
 #include <iostream>
-#include "Mundial.h"
+#include "../include/Mundial.h"
 using namespace std;
 
 int main() {
-    // Punto de entrada del sistema UdeAWorldCup
-    cout << "=== UdeAWorldCup - FIFA 2026 ==" << endl;
+    Mundial mundial(2026, 48);
+    mundial.cargarEquipos();
+    mundial.conformarGrupos();
+    mundial.simularTorneo();
+    mundial.generarEstadisticas();
     return 0;
 }
