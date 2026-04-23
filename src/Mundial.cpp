@@ -1,5 +1,7 @@
 #include "../include/Mundial.h"
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <cstdlib>
 #include <ctime>
 using namespace std;
@@ -22,9 +24,57 @@ Mundial::~Mundial() {
     for(int i=0;i<cantFases;i++)   if(fases[i])   delete fases[i];
 }
 
+// ---------------------------------------------------------------
+// Req I: Carga de equipos desde CSV
+// Formato: pais,confederacion,ranking,DT,golesFavor,golesContra,
+//          ganados,empatados,perdidos
+// Tarjetas amarillas, rojas y faltas se inicializan en 0 (enunciado)
+// ---------------------------------------------------------------
 void Mundial::cargarEquipos() {
-    // TODO: leer desde seleccionesclasificadasmundial.csv
-    cout << "[Mundial] cargarEquipos() pendiente de implementacion con CSV\n";
+    ifstream archivo("data/selecciones_clasificadas_mundial.csv");
+    if (!archivo.is_open()) {
+        cerr << "[Error] No se pudo abrir data/selecciones_clasificadas_mundial.csv\n";
+        return;
+    }
+
+    string linea;
+    getline(archivo, linea); // saltar encabezado
+    cantEquipos = 0;
+
+    while (getline(archivo, linea) && cantEquipos < 48) {
+        if (linea.empty()) continue;
+        istringstream ss(linea);
+        string pais, conf, rankStr, DT, gfStr, gcStr, ganStr, empStr, perStr;
+
+        getline(ss, pais,    ',');
+        getline(ss, conf,    ',');
+        getline(ss, rankStr, ',');
+        getline(ss, DT,      ',');
+        getline(ss, gfStr,   ',');
+        getline(ss, gcStr,   ',');
+        getline(ss, ganStr,  ',');
+        getline(ss, empStr,  ',');
+        getline(ss, perStr,  ',');
+
+        int ranking = stoi(rankStr);
+        int gf      = stoi(gfStr);
+        int gc      = stoi(gcStr);
+        int gan     = stoi(ganStr);
+        int emp     = stoi(empStr);
+        int per     = stoi(perStr);
+
+        Equipo* e = new Equipo(pais, conf, ranking, DT);
+        // Establecer estadisticas historicas iniciales
+        e->setEstadisticasIniciales(gf, gc, gan, emp, per);
+        // Tarjetas y faltas iniciales = 0 (ya es el default en EstadisticasEquipo)
+
+        // Crear plantilla con reparto uniforme de goles
+        e->cargarJugadores();
+
+        equipos[cantEquipos++] = e;
+    }
+    archivo.close();
+    cout << "[Mundial] " << cantEquipos << " equipos cargados desde CSV.\n";
 }
 
 void Mundial::conformarGrupos() {

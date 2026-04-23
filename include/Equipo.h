@@ -21,12 +21,14 @@ public:
     ~Equipo();
 
     void cargarJugadores();
+    void setEstadisticasIniciales(int gf, int gc, int gan, int emp, int per);
     Jugador** seleccionarConvocados();
     void actualizarEstadisticas(int gf, int gc, int resultado);
-    int getGFA();
-    int getGEC();
+
+    int    getGFA();
+    int    getGEC();
     string getPais();
-    int getRanking();
+    int    getRanking();
     string getConfederacion();
 
     friend ostream& operator<<(ostream& os, const Equipo& e);
