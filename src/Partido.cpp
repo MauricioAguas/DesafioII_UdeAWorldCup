@@ -1,6 +1,7 @@
 #include "../hds/Partido.h"
 #include <iostream>
 #include <cstdlib>
+#include <cmath>
 using namespace std;
 
 Partido::Partido() {
@@ -23,20 +24,32 @@ Partido::Partido(string fecha, string hora, string sede, Equipo* e1, Equipo* e2)
 
 Partido::~Partido() { if (resultado) delete resultado; }
 
-// Req III-a: lambda = 0.4*promGFA + 0.6*promGEC + 1.35
+// Formula del enunciado (ecuacion 1):
+// lambda_A = mu * (GF_A / mu)^alpha * (GC_B / mu)^beta
+// alpha = 0.6, beta = 0.4, mu = 1.35
+// GF_A = promedio goles a favor de equipo atacante (historico)
+// GC_B = promedio goles en contra de equipo defensor (historico)
 float Partido::calcularGolesEsperados(Equipo* ataque, Equipo* defensa) {
+    const float mu    = 1.35f;
+    const float alpha = 0.6f;
+    const float beta  = 0.4f;
+
     int pjA = ataque->getPartidosJugados();
     int pjD = defensa->getPartidosJugados();
-    float promGFA = (pjA > 0) ? (float)ataque->getGFA()  / pjA : 1.0f;
-    float promGEC = (pjD > 0) ? (float)defensa->getGEC() / pjD : 1.0f;
-    return 0.4f * promGFA + 0.6f * promGEC + 1.35f;
+
+    float gfa = (pjA > 0) ? (float)ataque->getGFA() / pjA : mu;
+    float gcb = (pjD > 0) ? (float)defensa->getGEC() / pjD : mu;
+
+    // Evitar log(0) / pow(0) con minimo de 0.01
+    if (gfa < 0.01f) gfa = 0.01f;
+    if (gcb < 0.01f) gcb = 0.01f;
+
+    float lambda = mu * pow(gfa / mu, alpha) * pow(gcb / mu, beta);
+    return lambda;
 }
 
-// Distribuye exactamente 'total' goles entre los 11 convocados.
-// Registra en golesPartido (no en historico) para que imprimirResumen sea correcto.
 static void distribuirGoles(Jugador** conv, int total, Resultado* res, bool esEquipo1) {
     int asignados = 0;
-    // Hasta 5 pasadas con 4% de probabilidad por jugador
     for (int p = 0; p < 5 && asignados < total; p++) {
         for (int i = 0; i < 11 && asignados < total; i++) {
             if ((rand() % 100) < 4) {
@@ -47,7 +60,6 @@ static void distribuirGoles(Jugador** conv, int total, Resultado* res, bool esEq
             }
         }
     }
-    // Si quedan goles sin asignar, van al jugador 0
     while (asignados < total) {
         conv[0]->actualizarEstadisticas(1, 0, 0, 0, 0);
         if (esEquipo1) res->registrarGolPartido1(0);
@@ -77,12 +89,16 @@ static void asignarTarjetasYFaltas(Jugador** conv) {
 void Partido::simular() {
     Jugador** c1 = equipo1->seleccionarConvocados();
     Jugador** c2 = equipo2->seleccionarConvocados();
+
     float lambda1 = calcularGolesEsperados(equipo1, equipo2);
     float lambda2 = calcularGolesEsperados(equipo2, equipo1);
-    int gf1 = (int)lambda1 + (rand() % 3) - 1;
-    int gf2 = (int)lambda2 + (rand() % 3) - 1;
+
+    // Redondear lambda y agregar variacion aleatoria [-1, +1]
+    int gf1 = (int)(lambda1 + 0.5f) + (rand() % 3) - 1;
+    int gf2 = (int)(lambda2 + 0.5f) + (rand() % 3) - 1;
     if (gf1 < 0) gf1 = 0;
     if (gf2 < 0) gf2 = 0;
+
     resultado = new Resultado(gf1, gf2, false, c1, c2);
     resultado->calcularPosesion(equipo1->getRanking(), equipo2->getRanking());
     distribuirGoles(c1, gf1, resultado, true);
@@ -109,7 +125,6 @@ void Partido::simularConProrroga() {
         if ((rand() % 100) < umbral) { gf1++; } else { gf2++; }
         resultado = new Resultado(gf1, gf2, true, c1, c2);
         resultado->calcularPosesion(r1, r2);
-        // Registrar el gol extra de prorroga al jugador 0 del equipo ganador
         if (gf1 > gf2) { c1[0]->actualizarEstadisticas(1,0,0,0,0); resultado->registrarGolPartido1(0); }
         else           { c2[0]->actualizarEstadisticas(1,0,0,0,0); resultado->registrarGolPartido2(0); }
         resultado->actualizarHistoricos(equipo1, equipo2);
@@ -126,13 +141,11 @@ void Partido::imprimirResumen() {
          << " - " << resultado->getGfEquipo2() << " " << equipo2->getPais();
     if (resultado->getHuboProrroga()) cout << " (Prorroga)";
 
-    // Posesion calculada por ranking FIFA
     int pos1 = (int)(resultado->getPosesionEq1() * 100.0f);
     int pos2 = 100 - pos1;
     cout << "\nPosesion: " << equipo1->getPais() << " " << pos1
          << "%  |  " << equipo2->getPais() << " " << pos2 << "%";
 
-    // Goleadores: solo los que anotaron en ESTE partido
     cout << "\nGoleadores " << equipo1->getPais() << ": ";
     for (int i = 0; i < 11; i++) {
         if (resultado->getGolesPartido1(i) > 0)
