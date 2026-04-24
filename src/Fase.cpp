@@ -48,6 +48,11 @@ void Fase::generarTablas() {
 void Fase::imprimirResultados() {
     cout << "\n========== " << nombre << " ==========\n";
     if (tipo=="grupos") {
+        // Imprimir todos los partidos de cada grupo
+        for(int i=0;i<cantGrupos;i++) {
+            if(grupos[i]) grupos[i]->imprimirPartidos();
+        }
+        // Imprimir tablas de clasificacion
         for(int i=0;i<cantGrupos;i++) {
             if(grupos[i]) grupos[i]->imprimirTabla();
         }

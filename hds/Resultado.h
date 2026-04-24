@@ -12,6 +12,9 @@ private:
     bool huboProrroga;
     Jugador* convocados1[11];
     Jugador* convocados2[11];
+    // Goles anotados en ESTE partido (no historico acumulado)
+    int golesPartido1[11];
+    int golesPartido2[11];
 
 public:
     Resultado();
@@ -21,8 +24,15 @@ public:
     void calcularPosesion(int rankA, int rankB);
     Equipo* getGanador(Equipo* e1, Equipo* e2);
     void actualizarHistoricos(Equipo* e1, Equipo* e2);
+
+    void registrarGolPartido1(int idx);
+    void registrarGolPartido2(int idx);
+    int  getGolesPartido1(int idx);
+    int  getGolesPartido2(int idx);
+
     int getGfEquipo1();
     int getGfEquipo2();
+    float getPosesionEq1();
     bool getHuboProrroga();
     Jugador** getConvocados1();
     Jugador** getConvocados2();

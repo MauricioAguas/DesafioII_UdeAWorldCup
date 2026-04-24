@@ -51,6 +51,7 @@ void Grupo::generarTablaClasif() {
         else if (gf1<gf2) puntos[i2]+=3;
         else { puntos[i1]++; puntos[i2]++; }
     }
+    // Ordenar por puntos > DG > GF (bubble sort)
     for (int i=0;i<3;i++) for (int j=0;j<3-i;j++) {
         bool sw=false;
         if (puntos[j]<puntos[j+1]) sw=true;
@@ -65,11 +66,21 @@ void Grupo::generarTablaClasif() {
     }
 }
 
+void Grupo::imprimirPartidos() {
+    cout << "\n--- Partidos Grupo " << letra << " ---";
+    for (int i=0;i<6;i++) {
+        if (partidos[i]) partidos[i]->imprimirResumen();
+    }
+}
+
 void Grupo::imprimirTabla() {
     cout << "\n=== Grupo " << letra << " ===\nPos | Equipo                | Pts | DG  | GF\n----|----------------------|-----|-----|----";
     for (int i=0;i<cantEquipos;i++) {
-        cout << "\n " << (i+1) << "  | " << equipos[i]->getPais();
-        int len=equipos[i]->getPais().length(); for(int s=len;s<21;s++) cout<<" ";
+        cout << "\n " << (i+1) << "  | " << equipos[i]->getPais()
+             << " (" << equipos[i]->getConfederacion() << ")";
+        // Padding para alinear columnas
+        int len = equipos[i]->getPais().length() + equipos[i]->getConfederacion().length() + 3;
+        for(int s=len;s<21;s++) cout<<" ";
         cout << "| " << puntos[i] << "   | " << difGoles[i] << "   | " << golesFavor[i];
     }
     cout << endl;
@@ -80,3 +91,5 @@ char     Grupo::getLetra()            { return letra; }
 Equipo*  Grupo::getEquipo(int i)      { return (i>=0&&i<cantEquipos)?equipos[i]:nullptr; }
 int      Grupo::getCantEquipos()      { return cantEquipos; }
 int      Grupo::getPuntos(int i)      { return (i>=0&&i<4)?puntos[i]:0; }
+int      Grupo::getDifGoles(int i)    { return (i>=0&&i<4)?difGoles[i]:0; }
+int      Grupo::getGolesFavor(int i)  { return (i>=0&&i<4)?golesFavor[i]:0; }
