@@ -24,11 +24,6 @@ Mundial::~Mundial() {
     for(int i=0;i<cantFases;i++)   if(fases[i])   delete fases[i];
 }
 
-// ---------------------------------------------------------------
-// Req I: Carga de equipos desde CSV
-// Formato: ranking,pais,DT,federacion,confederacion,gf,gc,gan,emp,per
-// Tarjetas y faltas iniciales = 0 (enunciado)
-// ---------------------------------------------------------------
 void Mundial::cargarEquipos() {
     ifstream archivo("data/selecciones_clasificadas_mundial.csv");
     if (!archivo.is_open()) {
@@ -36,8 +31,8 @@ void Mundial::cargarEquipos() {
         return;
     }
     string linea;
-    getline(archivo, linea); // saltar titulo
-    getline(archivo, linea); // saltar encabezado
+    getline(archivo, linea);
+    getline(archivo, linea);
     cantEquipos = 0;
     while (getline(archivo, linea) && cantEquipos < 48) {
         if (linea.empty()) continue;
@@ -65,10 +60,6 @@ void Mundial::cargarEquipos() {
     cout << "[Mundial] " << cantEquipos << " equipos cargados desde CSV.\n";
 }
 
-// ---------------------------------------------------------------
-// Req II: Conformacion de grupos (simplificada: orden CSV)
-// Imprime pais + confederacion de cada equipo
-// ---------------------------------------------------------------
 void Mundial::conformarGrupos() {
     char letras[12]={'A','B','C','D','E','F','G','H','I','J','K','L'};
     for(int g=0;g<12;g++) grupos[g]=new Grupo(letras[g]);
@@ -85,27 +76,21 @@ void Mundial::conformarGrupos() {
     }
 }
 
-// ---------------------------------------------------------------
-// Req III: Simulacion completa del torneo
-// ---------------------------------------------------------------
 void Mundial::simularTorneo() {
-    // --- Fase de Grupos ---
     Fase* faseGrupos=new Fase("Fase de Grupos","grupos","2026-06-20");
     for(int g=0;g<12;g++) faseGrupos->agregarGrupo(grupos[g]);
     faseGrupos->configurarPartidos();
     faseGrupos->simularPartidos();
     faseGrupos->generarTablas();
-    faseGrupos->imprimirResultados(); // imprime partidos + tablas
+    faseGrupos->imprimirResultados();
     fases[cantFases++]=faseGrupos;
 
-    // --- R16: 16 partidos ---
     Fase* faseR16=new Fase("Dieciseisavos (R16)","eliminacion","2026-07-10");
     armarR16(faseGrupos, faseR16);
     faseR16->simularPartidos();
     faseR16->imprimirResultados();
     fases[cantFases++]=faseR16;
 
-    // --- R8: 8 partidos (ganadores R16 de a pares) ---
     Fase* faseR8=new Fase("Octavos (R8)","eliminacion","2026-07-10");
     for(int i=0;i+1<faseR16->getCantPartidos();i+=2) {
         Equipo* g=faseR16->getGanadorPartido(i);
@@ -115,7 +100,6 @@ void Mundial::simularTorneo() {
     faseR8->simularPartidos(); faseR8->imprimirResultados();
     fases[cantFases++]=faseR8;
 
-    // --- QF: 4 partidos ---
     Fase* faseQF=new Fase("Cuartos (QF)","eliminacion","2026-07-10");
     for(int i=0;i+1<faseR8->getCantPartidos();i+=2) {
         Equipo* g=faseR8->getGanadorPartido(i);
@@ -125,7 +109,6 @@ void Mundial::simularTorneo() {
     faseQF->simularPartidos(); faseQF->imprimirResultados();
     fases[cantFases++]=faseQF;
 
-    // --- SF: 2 partidos ---
     Fase* faseSF=new Fase("Semifinales (SF)","eliminacion","2026-07-10");
     for(int i=0;i+1<faseQF->getCantPartidos();i+=2) {
         Equipo* g=faseQF->getGanadorPartido(i);
@@ -135,85 +118,60 @@ void Mundial::simularTorneo() {
     faseSF->simularPartidos(); faseSF->imprimirResultados();
     fases[cantFases++]=faseSF;
 
-    // --- Tercer Puesto: perdedores de cada semi ---
     Equipo* sf1g = faseSF->getGanadorPartido(0);
     Equipo* sf2g = faseSF->getGanadorPartido(1);
     Equipo* p0e1 = faseSF->getPartido(0) ? faseSF->getPartido(0)->getEquipo1() : nullptr;
     Equipo* p0e2 = faseSF->getPartido(0) ? faseSF->getPartido(0)->getEquipo2() : nullptr;
     Equipo* p1e1 = faseSF->getPartido(1) ? faseSF->getPartido(1)->getEquipo1() : nullptr;
     Equipo* p1e2 = faseSF->getPartido(1) ? faseSF->getPartido(1)->getEquipo2() : nullptr;
-    Equipo* perd1 = (sf1g && p0e1 && p0e2) ? ((sf1g==p0e1) ? p0e2 : p0e1) : nullptr;
-    Equipo* perd2 = (sf2g && p1e1 && p1e2) ? ((sf2g==p1e1) ? p1e2 : p1e1) : nullptr;
+    Equipo* perd1 = (sf1g&&p0e1&&p0e2) ? ((sf1g==p0e1)?p0e2:p0e1) : nullptr;
+    Equipo* perd2 = (sf2g&&p1e1&&p1e2) ? ((sf2g==p1e1)?p1e2:p1e1) : nullptr;
 
     Fase* fase3er=new Fase("Tercer Puesto","eliminacion","2026-07-10");
     if(perd1&&perd2) fase3er->agregarPartido(new Partido("2026-07-10","00:00","nombreSede",perd1,perd2));
     fase3er->simularPartidos(); fase3er->imprimirResultados();
     fases[cantFases++]=fase3er;
 
-    // --- Final ---
     Fase* faseFinal=new Fase("Final","eliminacion","2026-07-10");
     if(sf1g&&sf2g) faseFinal->agregarPartido(new Partido("2026-07-10","00:00","nombreSede",sf1g,sf2g));
     faseFinal->simularPartidos(); faseFinal->imprimirResultados();
     fases[cantFases++]=faseFinal;
 }
 
-// ---------------------------------------------------------------
-// Req IIIb: Armar R16 con 16 partidos segun el fixture del enunciado
-// 12 primeros (1 por grupo) vs los mejores terceros clasificados
-// 12 segundos vs segundos o cabezas restantes
-// Aqui se usa logica simplificada: 1ro de par de grupos vs 2do del otro
-// garantizando 16 partidos totales
-// ---------------------------------------------------------------
 void Mundial::armarR16(Fase* fg, Fase* r16) {
-    // Hay 12 grupos -> 12 primeros, 12 segundos, 12 terceros
-    // Fixture simplificado conforme al enunciado:
-    // Para cada par de grupos (A-B, C-D, E-F, G-H, I-J, K-L):
-    //   Partido 1: 1ro grupo A vs 2do grupo B
-    //   Partido 2: 1ro grupo B vs 2do grupo A
-    // Luego los 4 mejores terceros juegan contra cabezas restantes (simplificado)
-    // Total: 12 grupos / 2 = 6 pares -> 12 partidos de cruces + 4 de terceros = 16
-
-    // Partidos 1-12: cruces primer/segundo de grupos pares
     for(int g=0;g+1<fg->getCantGrupos();g+=2) {
         Grupo* ga=fg->getGrupo(g);
         Grupo* gb=fg->getGrupo(g+1);
         if(ga&&gb) {
-            Equipo* g1a = ga->obtenerClasificados()[0]; // 1ro grupo A
-            Equipo* g2a = ga->obtenerClasificados()[1]; // 2do grupo A
-            Equipo* g1b = gb->obtenerClasificados()[0]; // 1ro grupo B
-            Equipo* g2b = gb->obtenerClasificados()[1]; // 2do grupo B
+            Equipo* g1a = ga->obtenerClasificados()[0];
+            Equipo* g2a = ga->obtenerClasificados()[1];
+            Equipo* g1b = gb->obtenerClasificados()[0];
+            Equipo* g2b = gb->obtenerClasificados()[1];
             if(g1a&&g2b) r16->agregarPartido(new Partido("2026-07-10","00:00","nombreSede",g1a,g2b));
             if(g1b&&g2a) r16->agregarPartido(new Partido("2026-07-10","00:00","nombreSede",g1b,g2a));
         }
     }
-    // Partidos 13-16: los 4 mejores terceros (primeros 4 grupos: A,B,C,D)
-    // contra los segundos puestos de los grupos E,F,G,H (simplificado)
-    int terceroIdx[4] = {0, 1, 2, 3}; // grupos A,B,C,D
-    int segundoIdx[4] = {4, 5, 6, 7}; // grupos E,F,G,H
+    int terceroIdx[4] = {0, 1, 2, 3};
+    int segundoIdx[4] = {4, 5, 6, 7};
     for(int k=0;k<4;k++) {
         Grupo* gt = fg->getGrupo(terceroIdx[k]);
         Grupo* gs = fg->getGrupo(segundoIdx[k]);
         if(gt&&gs) {
-            Equipo* t3 = gt->obtenerClasificados()[2]; // 3ro del grupo
-            Equipo* s2 = gs->obtenerClasificados()[0]; // 1ro del otro grupo
+            Equipo* t3 = gt->obtenerClasificados()[2];
+            Equipo* s2 = gs->obtenerClasificados()[0];
             if(t3&&s2) r16->agregarPartido(new Partido("2026-07-10","00:00","nombreSede",t3,s2));
         }
     }
 }
 
-// ---------------------------------------------------------------
-// Req IV: Estadisticas finales del torneo
-// ---------------------------------------------------------------
 void Mundial::generarEstadisticas() {
     cout << "\n========== ESTADISTICAS FINALES ==========\n";
 
-    // 1. Ranking 4 primeros puestos
-    Equipo* campeon   = getCampeon();
+    Equipo* campeon    = getCampeon();
     Equipo* subcampeon = nullptr;
-    Equipo* tercero   = nullptr;
-    Equipo* cuarto    = nullptr;
+    Equipo* tercero    = nullptr;
+    Equipo* cuarto     = nullptr;
 
-    // Buscar final para subcampeon
     for(int i=0;i<cantFases;i++) {
         if(fases[i] && fases[i]->getNombre()=="Final") {
             Partido* pf = fases[i]->getPartido(0);
@@ -238,59 +196,76 @@ void Mundial::generarEstadisticas() {
     cout << "3er lugar: " << (tercero    ? tercero->getPais()    : "N/A") << "\n";
     cout << "4to lugar: " << (cuarto     ? cuarto->getPais()     : "N/A") << "\n";
 
-    // 2. Maximo goleador del campeon
+    // Maximo goleador del campeon (recorre los 26 jugadores de la plantilla)
     cout << "\n--- Maximo Goleador del Campeon (" << (campeon?campeon->getPais():"N/A") << ") ---\n";
     if(campeon) {
-        Jugador* maxGol = nullptr; int maxG = -1;
-        for(int j=0;j<26;j++) {
-            // Acceso via seleccionarConvocados no aplica; usamos getEstadisticas
-            // La plantilla completa no esta expuesta directamente;
-            // recorremos via seleccionarConvocados (devuelve 11 aleatorios)
-            // Para estadisticas reales necesitamos acceso a la plantilla completa
-            // Nota: se requeriria un getter getJugador(i) en Equipo
+        Jugador* maxJug = nullptr; int maxG = -1;
+        for(int j=0; j<campeon->getTamanoPlantilla(); j++) {
+            Jugador* jug = campeon->getJugador(j);
+            if(jug && jug->getGoles() > maxG) { maxG = jug->getGoles(); maxJug = jug; }
         }
-        // Alternativa: indicar que se necesita getter getJugador en Equipo
-        cout << "(Requiere getter getJugador(int) en Equipo para acceso completo a plantilla)\n";
+        if(maxJug)
+            cout << maxJug->getNombre() << " " << maxJug->getApellido()
+                 << " (#" << maxJug->getNumeroCamiseta() << ") - " << maxG << " goles\n";
     }
 
-    // 3. Tres mayores goleadores del torneo
+    // Top 3 goleadores del torneo (todos los equipos, todos los jugadores)
     cout << "\n--- Top 3 Goleadores del Torneo ---\n";
-    // Mismo problema: necesitamos recorrer toda la plantilla de cada equipo
-    // Se deja nota para agregar getter getJugador(int i) en Equipo.h
-    cout << "(Requiere getter getJugador(int) en Equipo para acceso a plantilla completa)\n";
+    Jugador* top[3] = {nullptr, nullptr, nullptr};
+    int topG[3]     = {-1, -1, -1};
+    Equipo*  topEq[3] = {nullptr, nullptr, nullptr};
+    for(int e=0; e<cantEquipos; e++) {
+        if(!equipos[e]) continue;
+        for(int j=0; j<equipos[e]->getTamanoPlantilla(); j++) {
+            Jugador* jug = equipos[e]->getJugador(j);
+            if(!jug) continue;
+            int g = jug->getGoles();
+            // Insertar en top 3
+            for(int k=0; k<3; k++) {
+                if(g > topG[k]) {
+                    // Desplazar
+                    for(int m=2; m>k; m--) { top[m]=top[m-1]; topG[m]=topG[m-1]; topEq[m]=topEq[m-1]; }
+                    top[k]=jug; topG[k]=g; topEq[k]=equipos[e];
+                    break;
+                }
+            }
+        }
+    }
+    for(int k=0; k<3; k++) {
+        if(top[k])
+            cout << (k+1) << ". " << top[k]->getNombre() << " " << top[k]->getApellido()
+                 << " (#" << top[k]->getNumeroCamiseta() << ") - "
+                 << topEq[k]->getPais() << " - " << topG[k] << " goles\n";
+    }
 
-    // 4. Equipo con mas goles historicos (ya actualizados con copa)
+    // Equipo con mas goles historicos
     cout << "\n--- Equipo con mas goles historicos (post-copa) ---\n";
     Equipo* masGoles = getEquipoMasGoles();
     if(masGoles)
         cout << masGoles->getPais() << " con " << masGoles->getGFA() << " goles a favor historicos\n";
 
-    // 5. Confederacion con mayor presencia en R16, R8, QF
+    // Confederacion con mayor presencia en cada etapa
     const char* etapas[3] = {"Dieciseisavos (R16)", "Octavos (R8)", "Cuartos (QF)"};
+    string confNombres[6] = {"UEFA","CONMEBOL","CONCACAF","CAF","AFC","OFC"};
     for(int e=0;e<3;e++) {
-        // Contar equipos por confederacion en cada etapa
-        string confNombres[8] = {"UEFA","CONMEBOL","CONCACAF","CAF","AFC","OFC","",""};
-        int confCount[8] = {0};
+        int confCount[6] = {0};
         for(int f=0;f<cantFases;f++) {
             if(!fases[f] || fases[f]->getNombre()!=etapas[e]) continue;
             for(int p=0;p<fases[f]->getCantPartidos();p++) {
                 Partido* par = fases[f]->getPartido(p);
                 if(!par) continue;
-                // Contar equipo1 y equipo2
                 Equipo* eq[2] = {par->getEquipo1(), par->getEquipo2()};
                 for(int q=0;q<2;q++) {
                     if(!eq[q]) continue;
-                    string conf = eq[q]->getConfederacion();
-                    for(int c=0;c<6;c++) {
-                        if(conf==confNombres[c]) { confCount[c]++; break; }
-                    }
+                    for(int c=0;c<6;c++)
+                        if(eq[q]->getConfederacion()==confNombres[c]) { confCount[c]++; break; }
                 }
             }
         }
         string maxConf=""; int maxC=0;
         for(int c=0;c<6;c++) if(confCount[c]>maxC) { maxC=confCount[c]; maxConf=confNombres[c]; }
-        cout << "\nConfederacion con mayor presencia en " << etapas[e] << ": "
-             << maxConf << " (" << maxC << " equipos)\n";
+        cout << "\nConfederacion con mayor presencia en " << etapas[e]
+             << ": " << maxConf << " (" << maxC << " equipos)\n";
     }
 }
 

@@ -28,24 +28,21 @@ Equipo::~Equipo() {
 }
 
 void Equipo::cargarJugadores() {
-    // Repartir goles historicos del equipo uniformemente entre los 26 jugadores
-    int totalGoles   = estadisticas->getGolesFavor();
-    int golesPorJug  = totalGoles / 26;
-    int golesResto   = totalGoles % 26;   // primeros 'golesResto' jugadores reciben 1 extra
-
+    int totalGoles  = estadisticas->getGolesFavor();
+    int golesPorJug = totalGoles / 26;
+    int golesResto  = totalGoles % 26;
     for (int i = 0; i < 26; i++) {
         int goles = golesPorJug + (i < golesResto ? 1 : 0);
         plantilla[i] = new Jugador(
             "nombre"   + to_string(i + 1),
             "apellido" + to_string(i + 1),
-            i + 1,   // numero de camiseta
-            goles    // goles historicos iniciales
+            i + 1,
+            goles
         );
     }
 }
 
 Jugador** Equipo::seleccionarConvocados() {
-    // Seleccion aleatoria de 11 jugadores distintos de la plantilla
     Jugador** convocados = new Jugador*[11];
     bool seleccionado[26] = {false};
     int cnt = 0;
@@ -71,12 +68,15 @@ void Equipo::setEstadisticasIniciales(int gf, int gc, int gan, int emp, int per)
     estadisticas->setPerdidos(per);
 }
 
-int Equipo::getGFA()           { return estadisticas->getGolesFavor(); }
-int Equipo::getGEC()           { return estadisticas->getGolesContra(); }
+Jugador* Equipo::getJugador(int i)      { return (i >= 0 && i < 26) ? plantilla[i] : nullptr; }
+int      Equipo::getTamanoPlantilla()   { return 26; }
+
+int Equipo::getGFA()             { return estadisticas->getGolesFavor(); }
+int Equipo::getGEC()             { return estadisticas->getGolesContra(); }
 int Equipo::getPartidosJugados() {
-        return estadisticas->getGanados()
-             + estadisticas->getEmpatados()
-             + estadisticas->getPerdidos();
+    return estadisticas->getGanados()
+         + estadisticas->getEmpatados()
+         + estadisticas->getPerdidos();
 }
 EstadisticasEquipo* Equipo::getEstadisticas() { return estadisticas; }
 string Equipo::getPais()          { return pais; }

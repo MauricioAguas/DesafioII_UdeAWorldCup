@@ -27,11 +27,15 @@ public:
 
     int    getGFA();
     int    getGEC();
-    int    getPartidosJugados();   // gan + emp + per
+    int    getPartidosJugados();
     string getPais();
     int    getRanking();
     string getConfederacion();
     EstadisticasEquipo* getEstadisticas();
+
+    // Getter para acceder a jugador individual de la plantilla (0..25)
+    Jugador* getJugador(int i);
+    int      getTamanoPlantilla();
 
     friend ostream& operator<<(ostream& os, const Equipo& e);
 };
