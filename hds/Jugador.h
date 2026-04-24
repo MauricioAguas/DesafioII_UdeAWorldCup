@@ -15,7 +15,6 @@ private:
 
 public:
     Jugador();
-    // golesIniciales: goles historicos previos al mundial (Req I)
     Jugador(string nombre, string apellido, int numeroCamiseta, int golesIniciales = 0);
     ~Jugador();
 
@@ -23,6 +22,10 @@ public:
     string getApellido();
     int    getNumeroCamiseta();
     EstadisticasJugador* getEstadisticas();
+
+    // Delegadores usados en Partido.cpp y Resultado.cpp
+    void actualizarEstadisticas(int goles, int minutos, int amarillas, int rojas, int faltas);
+    int  getGoles();
 
     friend ostream& operator<<(ostream& os, const Jugador& j);
 };

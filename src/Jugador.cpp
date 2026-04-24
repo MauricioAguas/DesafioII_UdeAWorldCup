@@ -1,4 +1,4 @@
-#include "../include/Jugador.h"
+#include "../hds/Jugador.h"
 #include <iostream>
 using namespace std;
 
@@ -9,8 +9,6 @@ Jugador::Jugador() {
     estadisticas   = new EstadisticasJugador();
 }
 
-// Req I: constructor con goles historicos iniciales
-// Los goles se cargan via actualizar(); el resto de stats inician en 0
 Jugador::Jugador(string nombre, string apellido, int numeroCamiseta, int golesIniciales) {
     this->nombre         = nombre;
     this->apellido       = apellido;
@@ -22,6 +20,16 @@ Jugador::Jugador(string nombre, string apellido, int numeroCamiseta, int golesIn
 
 Jugador::~Jugador() {
     delete estadisticas;
+}
+
+// Delega en EstadisticasJugador::actualizar()
+void Jugador::actualizarEstadisticas(int goles, int minutos, int amarillas, int rojas, int faltas) {
+    estadisticas->actualizar(goles, minutos, amarillas, rojas, faltas);
+}
+
+// Delega en EstadisticasJugador::getGoles()
+int Jugador::getGoles() {
+    return estadisticas->getGoles();
 }
 
 string Jugador::getNombre()         { return nombre;         }

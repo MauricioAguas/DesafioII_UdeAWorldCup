@@ -1,4 +1,4 @@
-#include "../include/Grupo.h"
+#include "../hds/Grupo.h"
 #include <iostream>
 using namespace std;
 

@@ -1,4 +1,4 @@
-#include "../include/Resultado.h"
+#include "../hds/Resultado.h"
 #include <iostream>
 using namespace std;
 

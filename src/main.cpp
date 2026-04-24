@@ -1,5 +1,5 @@
 #include <iostream>
-#include "../include/Mundial.h"
+#include "../hds/Mundial.h"
 using namespace std;
 
 int main() {

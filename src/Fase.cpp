@@ -1,4 +1,4 @@
-#include "../include/Fase.h"
+#include "../hds/Fase.h"
 #include <iostream>
 using namespace std;
 
@@ -13,34 +13,55 @@ Fase::Fase(string nombre, string tipo, string fechaInicio) : Fase() {
 }
 
 Fase::~Fase() {
-    if (tipo=="eliminacion")
-        for(int i=0;i<cantPartidos;i++) if(partidos[i]) delete partidos[i];
+    if (tipo=="eliminacion") {
+        for(int i=0;i<cantPartidos;i++) {
+            if(partidos[i]) delete partidos[i];
+        }
+    }
 }
 
 void Fase::agregarGrupo(Grupo* g)     { if(cantGrupos<12)   grupos[cantGrupos++]=g; }
 void Fase::agregarPartido(Partido* p) { if(cantPartidos<32) partidos[cantPartidos++]=p; }
 
 void Fase::configurarPartidos() {
-    for(int i=0;i<cantGrupos;i++) if(grupos[i]) grupos[i]->configurarPartidos(fechaInicio);
+    for(int i=0;i<cantGrupos;i++) {
+        if(grupos[i]) grupos[i]->configurarPartidos(fechaInicio);
+    }
 }
 
 void Fase::simularPartidos() {
-    if (tipo=="grupos")     for(int i=0;i<cantGrupos;i++)  if(grupos[i])   grupos[i]->simularPartidos();
-    else                    simularEliminatoria();
+    if (tipo=="grupos") {
+        for(int i=0;i<cantGrupos;i++) {
+            if(grupos[i]) grupos[i]->simularPartidos();
+        }
+    } else {
+        simularEliminatoria();
+    }
 }
 
 void Fase::generarTablas() {
-    for(int i=0;i<cantGrupos;i++) if(grupos[i]) grupos[i]->generarTablaClasif();
+    for(int i=0;i<cantGrupos;i++) {
+        if(grupos[i]) grupos[i]->generarTablaClasif();
+    }
 }
 
 void Fase::imprimirResultados() {
     cout << "\n========== " << nombre << " ==========\n";
-    if (tipo=="grupos")  for(int i=0;i<cantGrupos;i++)  if(grupos[i])   grupos[i]->imprimirTabla();
-    else                 for(int i=0;i<cantPartidos;i++) if(partidos[i]) partidos[i]->imprimirResumen();
+    if (tipo=="grupos") {
+        for(int i=0;i<cantGrupos;i++) {
+            if(grupos[i]) grupos[i]->imprimirTabla();
+        }
+    } else {
+        for(int i=0;i<cantPartidos;i++) {
+            if(partidos[i]) partidos[i]->imprimirResumen();
+        }
+    }
 }
 
 void Fase::simularEliminatoria() {
-    for(int i=0;i<cantPartidos;i++) if(partidos[i]) partidos[i]->simularConProrroga();
+    for(int i=0;i<cantPartidos;i++) {
+        if(partidos[i]) partidos[i]->simularConProrroga();
+    }
 }
 
 Equipo* Fase::getGanadorPartido(int i) {

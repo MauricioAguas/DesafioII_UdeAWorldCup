@@ -1,4 +1,4 @@
-#include "../include/EstadisticasJugador.h"
+#include "../hds/EstadisticasJugador.h"
 
 EstadisticasJugador::EstadisticasJugador() {
     partidosJugados = goles = minutosJugados = asistencias = 0;

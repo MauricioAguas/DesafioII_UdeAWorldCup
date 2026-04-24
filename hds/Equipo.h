@@ -27,9 +27,11 @@ public:
 
     int    getGFA();
     int    getGEC();
+    int    getPartidosJugados();   // gan + emp + per
     string getPais();
     int    getRanking();
     string getConfederacion();
+    EstadisticasEquipo* getEstadisticas();
 
     friend ostream& operator<<(ostream& os, const Equipo& e);
 };

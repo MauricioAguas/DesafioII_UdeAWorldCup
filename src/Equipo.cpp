@@ -1,4 +1,4 @@
-#include "../include/Equipo.h"
+#include "../hds/Equipo.h"
 #include <iostream>
 using namespace std;
 
@@ -71,8 +71,14 @@ void Equipo::setEstadisticasIniciales(int gf, int gc, int gan, int emp, int per)
     estadisticas->setPerdidos(per);
 }
 
-int    Equipo::getGFA()           { return estadisticas->getGolesFavor(); }
-int    Equipo::getGEC()           { return estadisticas->getGolesContra(); }
+int Equipo::getGFA()           { return estadisticas->getGolesFavor(); }
+int Equipo::getGEC()           { return estadisticas->getGolesContra(); }
+int Equipo::getPartidosJugados() {
+        return estadisticas->getGanados()
+             + estadisticas->getEmpatados()
+             + estadisticas->getPerdidos();
+}
+EstadisticasEquipo* Equipo::getEstadisticas() { return estadisticas; }
 string Equipo::getPais()          { return pais; }
 int    Equipo::getRanking()       { return ranking; }
 string Equipo::getConfederacion() { return confederacion; }

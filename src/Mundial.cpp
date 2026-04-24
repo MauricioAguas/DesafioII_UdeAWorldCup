@@ -1,4 +1,4 @@
-#include "../include/Mundial.h"
+#include "../hds/Mundial.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -38,23 +38,25 @@ void Mundial::cargarEquipos() {
     }
 
     string linea;
-    getline(archivo, linea); // saltar encabezado
+    getline(archivo, linea); // saltar fila 1: titulo "Selecciones clasificadas..."
+    getline(archivo, linea); // saltar fila 2: encabezado de columnas
     cantEquipos = 0;
 
     while (getline(archivo, linea) && cantEquipos < 48) {
         if (linea.empty()) continue;
         istringstream ss(linea);
-        string pais, conf, rankStr, DT, gfStr, gcStr, ganStr, empStr, perStr;
+        string rankStr, pais, DT, federacion, conf, gfStr, gcStr, ganStr, empStr, perStr;
 
-        getline(ss, pais,    ',');
-        getline(ss, conf,    ',');
-        getline(ss, rankStr, ',');
-        getline(ss, DT,      ',');
-        getline(ss, gfStr,   ',');
-        getline(ss, gcStr,   ',');
-        getline(ss, ganStr,  ',');
-        getline(ss, empStr,  ',');
-        getline(ss, perStr,  ',');
+        getline(ss, rankStr,   ',');  // col 1: Ranking FIFA
+        getline(ss, pais,      ',');  // col 2: País
+        getline(ss, DT,        ',');  // col 3: Director técnico
+        getline(ss, federacion,',');  // col 4: Federación (no se usa)
+        getline(ss, conf,      ',');  // col 5: Confederación
+        getline(ss, gfStr,     ',');  // col 6: Goles a favor
+        getline(ss, gcStr,     ',');  // col 7: Goles en contra
+        getline(ss, ganStr,    ',');  // col 8: Partidos ganados
+        getline(ss, empStr,    ',');  // col 9: Partidos empatados
+        getline(ss, perStr,    ',');  // col 10: Partidos perdidos
 
         int ranking = stoi(rankStr);
         int gf      = stoi(gfStr);

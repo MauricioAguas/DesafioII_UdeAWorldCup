@@ -1,4 +1,4 @@
-#include "../include/EstadisticasEquipo.h"
+#include "../hds/EstadisticasEquipo.h"
 
 EstadisticasEquipo::EstadisticasEquipo() {
     golesFavor  = 0;

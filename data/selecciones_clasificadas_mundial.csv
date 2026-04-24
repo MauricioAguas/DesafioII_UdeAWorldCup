@@ -1,49 +1,50 @@
-pais,confederacion,ranking,DT,golesFavor,golesContra,ganados,empatados,perdidos
-Argentina,CONMEBOL,1,Lionel Scaloni,30,5,10,2,1
-Francia,UEFA,2,Didier Deschamps,35,10,12,2,1
-Brasil,CONMEBOL,4,Dorival Junior,25,8,8,3,2
-Inglaterra,UEFA,5,Thomas Tuchel,28,9,9,3,2
-Espana,UEFA,6,Luis de la Fuente,30,8,10,2,2
-Portugal,UEFA,7,Roberto Martinez,27,10,9,2,3
-Paises Bajos,UEFA,8,Ronald Koeman,26,9,9,2,3
-Colombia,CONMEBOL,9,Nestor Lorenzo,20,7,7,2,3
-Croacia,UEFA,10,Zlatko Dalic,18,8,6,4,4
-Estados Unidos,CONCACAF,11,Mauricio Pochettino,22,10,7,4,3
-Uruguay,CONMEBOL,12,Marcelo Bielsa,18,9,6,3,3
-Alemania,UEFA,13,Julian Nagelsmann,24,11,8,3,3
-Marruecos,CAF,14,Walid Regragui,18,7,6,3,3
-Mexico,CONCACAF,15,Javier Aguirre,20,11,7,3,4
-Belgica,UEFA,16,Rudi Garcia,20,10,7,3,4
-Italia,UEFA,17,Luciano Spalletti,19,9,7,2,5
-Canada,CONCACAF,18,Jesse Marsch,18,10,6,4,4
-Japon,AFC,19,Hajime Moriyasu,20,9,7,2,5
-Suiza,UEFA,20,Murat Yakin,16,10,5,4,5
-Corea del Sur,AFC,21,Hong Myung-bo,18,10,6,3,5
-Iran,AFC,22,Amir Ghalenoei,15,10,5,3,6
-Ecuador,CONMEBOL,23,Sebastian Beccacece,14,10,5,2,5
-Ucrania,UEFA,24,Serhiy Rebrov,14,11,5,2,7
-Australia,AFC,25,Tony Popovic,14,11,5,2,7
-Senegal,CAF,26,Aliou Cisse,16,9,5,4,4
-Serbia,UEFA,27,Dragan Stojkovic,13,12,4,3,7
-Turquia,UEFA,29,Vincenzo Montella,14,11,4,4,6
-Polonia,UEFA,30,Michal Probierz,12,12,4,3,7
-Venezuela,CONMEBOL,31,Fernando Batista,10,12,3,3,6
-Egipto,CAF,32,Hossam Hassan,12,11,4,3,7
-Costa de Marfil,CAF,33,Emerse Fae,12,11,4,3,7
-Hungria,UEFA,34,Marco Rossi,10,14,3,3,8
-Escocia,UEFA,35,Steve Clarke,13,12,4,3,7
-Eslovaquia,UEFA,36,Francesco Calzona,11,13,3,3,8
-Austria,UEFA,37,Ralf Rangnick,15,11,5,3,6
-Nigeria,CAF,41,Finidi George,11,12,3,4,7
-Camerun,CAF,43,Marc Brys,10,13,3,3,8
-Rumania,UEFA,46,Mircea Lucescu,10,13,3,3,8
-Costa Rica,CONCACAF,47,Gustavo Alfaro,9,15,3,2,9
-Panama,CONCACAF,53,Thomas Christiansen,10,14,3,2,9
-Mali,CAF,57,Eric Chelle,8,14,2,3,9
-Arabia Saudita,AFC,58,Herve Renard,9,14,3,2,9
-Sudafrica,CAF,60,Hugo Broos,7,15,2,2,10
-Uzbekistan,AFC,62,Srecko Katanec,7,15,2,2,10
-Irak,AFC,63,Jesus Casas,8,15,2,3,9
-Jordania,AFC,71,Hussein Ammouta,6,16,1,3,10
-Honduras,CONCACAF,74,Reinaldo Rueda,8,16,2,3,9
-Nueva Zelanda,OFC,97,Darren Bazeley,5,17,1,2,11
+Selecciones clasificadas al Mundial de Fútbol 2026,,,,,,,,,
+Ranking FIFA (1 abril 2026),País,Director técnico,Federación de fútbol,Confederación,Goles a favor,Goles en contra,Partidos ganados,Partidos empatados,Partidos perdidos
+1,France,Didier Deschamps,French Football Federation,UEFA,20,5,7,1,0
+2,Spain,Luis de la Fuente,Royal Spanish Football Federation,UEFA,20,5,7,1,0
+3,Argentina,Lionel Scaloni,Argentina Football Association,CONMEBOL,26,8,8,1,1
+4,England,Thomas Tuchel,The Football Association,UEFA,20,5,7,1,0
+5,Portugal,Roberto Martinez,Portuguese Football Federation,UEFA,20,5,7,1,0
+6,Brazil,Dorival Junior,Brazilian Football Confederation,CONMEBOL,20,7,6,3,1
+7,Netherlands,Ronald Koeman,Royal Dutch Football Association,UEFA,20,5,7,1,0
+8,Belgium,Rudi Garcia,Royal Belgian Football Association,UEFA,20,5,7,1,0
+9,Germany,Julian Nagelsmann,German Football Association,UEFA,20,5,7,1,0
+10,Italy,Luciano Spalletti,Italian Football Federation,UEFA,20,5,7,1,0
+11,Morocco,Walid Regragui,Royal Moroccan Football Federation,CAF,17,2,5,1,0
+12,Uruguay,Marcelo Bielsa,Uruguayan Football Association,CONMEBOL,17,7,6,3,1
+13,Colombia,Nestor Lorenzo,Colombian Football Federation,CONMEBOL,16,4,5,5,0
+14,Croatia,Zlatko Dalic,Croatian Football Federation,UEFA,19,5,6,1,1
+15,Mexico,Javier Aguirre,Mexican Football Federation,Concacaf,15,8,4,3,1
+16,United States,Mauricio Pochettino,U.S. Soccer Federation,Concacaf,16,9,5,1,2
+17,Japan,Hajime Moriyasu,Japan Football Association,AFC,24,2,6,0,0
+18,Iran,Amir Ghalenoei,Football Federation Islamic Republic of Iran,AFC,16,8,4,2,0
+19,Senegal,Pape Thiaw,Senegalese Football Federation,CAF,11,2,5,1,0
+20,Denmark,Brian Riemer,Danish Football Association,UEFA,17,6,6,1,1
+22,Austria,Ralf Rangnick,Austrian Football Association,UEFA,16,6,5,1,2
+23,Korea Republic,Hong Myung-bo,Korea Football Association,AFC,14,7,4,2,0
+25,Australia,Tony Popovic,Football Australia,AFC,14,6,4,1,1
+26,Turkey,Vincenzo Montella,Turkish Football Federation,UEFA,14,7,5,1,2
+27,Serbia,Dragan Stojkovic,Football Association of Serbia,UEFA,14,7,5,1,2
+28,Sweden,Jon Dahl Tomasson,Swedish Football Association,UEFA,14,7,5,1,2
+29,Egypt,Hossam Hassan,Egyptian Football Association,CAF,18,2,5,1,0
+30,Canada,Jesse Marsch,Canada Soccer,Concacaf,14,9,4,2,2
+31,Paraguay,Gustavo Alfaro,Paraguayan Football Association,CONMEBOL,13,9,6,3,1
+32,Panama,Thomas Christiansen,Panamanian Football Federation,Concacaf,11,9,4,2,2
+34,Nigeria,Eric Chelle,Nigeria Football Federation,CAF,10,6,4,2,2
+36,Costa Rica,Miguel Herrera,Costa Rican Football Federation,Concacaf,10,9,3,2,3
+37,Tunisia,Sabri Lamouchi,Tunisian Football Federation,CAF,9,0,4,2,0
+41,Czech Republic,Ivan Hasek,Football Association of the Czech Republic,UEFA,11,8,4,1,3
+43,Qatar,Julen Lopetegui,Qatar Football Association,AFC,17,8,4,1,1
+45,Cameroon,Marc Brys,Cameroonian Football Federation,CAF,16,4,4,0,2
+46,Scotland,Steve Clarke,Scottish Football Association,UEFA,11,8,4,1,3
+47,Uzbekistan,Timur Kapadze,Uzbekistan Football Association,AFC,11,7,3,3,0
+50,South Africa,Hugo Broos,South African Football Association,CAF,10,5,4,2,0
+51,Saudi Arabia,Herve Renard,Saudi Arabian Football Federation,AFC,7,6,3,1,2
+52,Bosnia and Herzegovina,Sergej Barbarez,Football Association of Bosnia and Herzegovina,UEFA,11,8,4,1,3
+53,Iraq,Jesus Casas,Iraq Football Association,AFC,7,7,2,1,3
+54,Jordan,Jamal Sellami,Jordan Football Association,AFC,16,7,4,1,1
+55,Ghana,Otto Addo,Ghana Football Association,CAF,14,7,5,0,1
+56,DR Congo,Sebastien Desabre,Congolese Association Football Federation,CAF,9,6,4,2,2
+57,Haiti,Sebastien Migne,Haitian Football Federation,Concacaf,10,9,3,2,3
+58,New Zealand,Darren Bazeley,New Zealand Football,OFC,7,1,2,0,0
+59,Cabo Verde,Bubista,Cape Verdean Football Federation,CAF,10,1,5,1,0
