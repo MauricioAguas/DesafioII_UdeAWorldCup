@@ -15,6 +15,12 @@ private:
     Fase*   fases[8];
     int     cantFases;
 
+    // --- Req V: medicion de recursos ---
+    long long iteraciones;   // acumulador de iteraciones de la funcionalidad activa
+
+    // Calcula bytes consumidos por TODOS los objetos vivos en este momento
+    long long calcularMemoria() const;
+
 public:
     Mundial();
     Mundial(int anio, int cantEquipos);
@@ -28,6 +34,9 @@ public:
     void armarR16(Fase* faseGrupos, Fase* faseR16);
     Equipo* getEquipoMasGoles();
     Equipo* getCampeon();
+
+    // Imprime metricas de la funcionalidad recien ejecutada
+    void imprimirMetricas(const string& nombreFunc) const;
 };
 
 #endif
