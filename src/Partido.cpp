@@ -125,8 +125,9 @@ void Partido::simularConProrroga() {
         if ((rand() % 100) < umbral) { gf1++; } else { gf2++; }
         resultado = new Resultado(gf1, gf2, true, c1, c2);
         resultado->calcularPosesion(r1, r2);
-        if (gf1 > gf2) { c1[0]->actualizarEstadisticas(1,0,0,0,0); resultado->registrarGolPartido1(0); }
-        else           { c2[0]->actualizarEstadisticas(1,0,0,0,0); resultado->registrarGolPartido2(0); }
+        // Redistribuir TODOS los goles en el nuevo resultado
+        distribuirGoles(c1, gf1, resultado, true);
+        distribuirGoles(c2, gf2, resultado, false);
         resultado->actualizarHistoricos(equipo1, equipo2);
         delete[] c1;
         delete[] c2;
