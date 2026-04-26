@@ -58,7 +58,7 @@ void imprimirMenu() {
 }
 
 // ============================================================
-// OPCION 5: tabla de grupo
+// OPCION 5: tabla de un grupo especifico
 // ============================================================
 void verTablaGrupo(Mundial& m, bool grupos) {
     if (!grupos) { cout << "  [!] Primero debe conformar los grupos (opcion 2).\n"; return; }
@@ -66,20 +66,41 @@ void verTablaGrupo(Mundial& m, bool grupos) {
     char letra; cin >> letra; letra = toupper(letra);
     if (letra < 'A' || letra > 'L') { cout << "  [!] Letra invalida.\n"; return; }
 
-    // Buscar el grupo en las fases
-    // Accedemos via la fase de grupos que esta en fases[0]
-    Fase* fg = nullptr;
-    for (int i = 0; i < 8; i++) {
-        // No tenemos getter directo desde Mundial, usamos simularTorneo que ya los crea.
-        // Si el torneo no fue simulado, grupos estan en Mundial::grupos[]
-        (void)i;
+    int idx = letra - 'A';
+    Grupo* g = m.getGrupo(idx);
+    if (!g) { cout << "  [!] Grupo no encontrado.\n"; return; }
+
+    cout << "\n  === Grupo " << letra << " ==="  << "\n";
+    cout << "  " << left;
+    cout.width(22); cout << "Equipo";
+    cout.width(6);  cout << "PJ";
+    cout.width(6);  cout << "G";
+    cout.width(6);  cout << "E";
+    cout.width(6);  cout << "P";
+    cout.width(6);  cout << "GF";
+    cout.width(6);  cout << "GC";
+    cout.width(6);  cout << "DIF";
+    cout.width(6);  cout << "PTS";
+    cout << "\n";
+    cout << "  " << string(68, '-') << "\n";
+
+    for (int i = 0; i < g->getCantEquipos(); i++) {
+        Equipo* e = g->getEquipo(i);
+        if (!e) continue;
+        EstadisticasEquipo* st = e->getEstadisticas();
+        int pts = st->getGanados()*3 + st->getEmpatados();
+        cout << "  ";
+        cout.width(22); cout << left << e->getPais();
+        cout.width(6);  cout << e->getPartidosJugados();
+        cout.width(6);  cout << st->getGanados();
+        cout.width(6);  cout << st->getEmpatados();
+        cout.width(6);  cout << st->getPerdidos();
+        cout.width(6);  cout << st->getGolesFavor();
+        cout.width(6);  cout << st->getGolesContra();
+        cout.width(6);  cout << (st->getGolesFavor() - st->getGolesContra());
+        cout.width(6);  cout << pts;
+        cout << "\n";
     }
-    // Buscamos directamente la fase de grupos via el getter
-    // Como no hay getFase() publico, imprimimos la tabla que genero simularTorneo
-    // o usamos el Grupo directamente si el torneo no fue corrido aun.
-    cout << "  [Tabla] Grupo " << letra << ":\n";
-    cout << "  (Ejecute el torneo para ver tablas actualizadas con puntos)\n";
-    // Nota: se puede extender con un getter getFase(int) en Mundial si se requiere.
 }
 
 // ============================================================
@@ -87,20 +108,41 @@ void verTablaGrupo(Mundial& m, bool grupos) {
 // ============================================================
 void verPartidosFase(Mundial& m, bool torneo) {
     if (!torneo) { cout << "  [!] Primero debe simular el torneo (opcion 3).\n"; return; }
+
+    const char* nombres[] = {
+        "Fase de Grupos", "Dieciseisavos (R16)", "Octavos (R8)",
+        "Cuartos (QF)",  "Semifinales (SF)",   "Tercer Puesto", "Final"
+    };
     cout << "  Fases disponibles:\n";
-    cout << "    1. Fase de Grupos\n";
-    cout << "    2. Dieciseisavos (R16)\n";
-    cout << "    3. Octavos (R8)\n";
-    cout << "    4. Cuartos (QF)\n";
-    cout << "    5. Semifinales (SF)\n";
-    cout << "    6. Tercer Puesto\n";
-    cout << "    7. Final\n";
-    cout << "  Seleccione fase: ";
+    for (int i = 0; i < 7; i++)
+        cout << "    " << (i+1) << ". " << nombres[i] << "\n";
+    cout << "  Seleccione fase (1-7): ";
     int op; cin >> op;
     if (op < 1 || op > 7) { cout << "  [!] Opcion invalida.\n"; return; }
-    // La impresion se hizo durante simularTorneo; notificamos al usuario.
-    cout << "  [Info] Los resultados de cada fase se imprimieron durante la simulacion.\n";
-    cout << "  Puede volver a ejecutar la simulacion (op 3) para verlos de nuevo.\n";
+
+    // Buscar la fase por nombre
+    Fase* fase = nullptr;
+    for (int i = 0; i < m.getCantFases(); i++) {
+        Fase* f = m.getFase(i);
+        if (f && f->getNombre() == nombres[op-1]) { fase = f; break; }
+    }
+    if (!fase) { cout << "  [!] Fase no disponible.\n"; return; }
+
+    cout << "\n  === " << fase->getNombre() << " ===\n";
+    cout << "  " << string(50, '-') << "\n";
+    for (int p = 0; p < fase->getCantPartidos(); p++) {
+        Partido* par = fase->getPartido(p);
+        if (!par) continue;
+        Resultado* res = par->getResultado();
+        cout << "  " << par->getEquipo1()->getPais();
+        if (res)
+            cout << "  " << res->getGfEquipo1() << " - " << res->getGfEquipo2();
+        else
+            cout << "  vs";
+        cout << "  " << par->getEquipo2()->getPais();
+        if (res && res->getHuboProrroga()) cout << "  (prorroga)";
+        cout << "\n";
+    }
 }
 
 // ============================================================
@@ -108,21 +150,39 @@ void verPartidosFase(Mundial& m, bool torneo) {
 // ============================================================
 void verJugadoresEquipo(Mundial& m, bool cargado) {
     if (!cargado) { cout << "  [!] Primero debe cargar los equipos (opcion 1).\n"; return; }
-    cout << "  Ingrese el nombre del pais (sensible a mayusculas): ";
+    cout << "  Ingrese el nombre del pais: ";
     cin.ignore();
     string pais; getline(cin, pais);
 
     Equipo* encontrado = nullptr;
-    for (int i = 0; i < 48; i++) {
-        // Buscamos via getCampeon auxiliar: no tenemos getter de equipos[]
-        // Usamos el metodo publico getJugador si encontramos el equipo.
-        // Para buscar por nombre usamos getPais() de cada equipo del campeon.
-        (void)i;
+    for (int i = 0; i < m.getCantEquipos(); i++) {
+        Equipo* e = m.getEquipo(i);
+        if (e && e->getPais() == pais) { encontrado = e; break; }
     }
-    // Nota: Mundial no expone equipos[] directamente.
-    // Para extender esto completamente se necesita un getter getEquipo(int i) en Mundial.
-    cout << "  [Info] Funcionalidad completa requiere getter getEquipo(int) en Mundial.\n";
-    cout << "  Agregue 'Equipo* getEquipo(int i);' en Mundial.h para habilitarla.\n";
+    if (!encontrado) {
+        cout << "  [!] Equipo '" << pais << "' no encontrado. Verifique mayusculas.\n";
+        return;
+    }
+
+    cout << "\n  === Plantilla: " << encontrado->getPais()
+         << " (" << encontrado->getConfederacion() << ") ==="
+         << "  Ranking FIFA: " << encontrado->getRanking() << "\n";
+    cout << "  " << string(52, '-') << "\n";
+    cout << "  #  " << left;
+    cout.width(22); cout << "Nombre";
+    cout.width(14); cout << "Apellido";
+    cout << "Goles" << "\n";
+    cout << "  " << string(52, '-') << "\n";
+
+    for (int j = 0; j < encontrado->getTamanoPlantilla(); j++) {
+        Jugador* jug = encontrado->getJugador(j);
+        if (!jug) continue;
+        cout << "  ";
+        cout.width(3);  cout << left << jug->getNumeroCamiseta();
+        cout.width(22); cout << jug->getNombre();
+        cout.width(14); cout << jug->getApellido();
+        cout << jug->getGoles() << "\n";
+    }
 }
 
 // ============================================================
@@ -131,7 +191,7 @@ void verJugadoresEquipo(Mundial& m, bool cargado) {
 int main() {
     Mundial mundial(2026, 48);
 
-    bool equiposCargados = false;
+    bool equiposCargados  = false;
     bool gruposConformados = false;
     bool torneoSimulado   = false;
     bool statsGeneradas   = false;
@@ -149,7 +209,6 @@ int main() {
 
         switch (opcion) {
 
-            // ── 1. Cargar equipos ─────────────────────────────────
             case 1:
                 cout << "\n=== Cargando equipos desde CSV... ===\n";
                 mundial.cargarEquipos();
@@ -160,7 +219,6 @@ int main() {
                 pausar();
                 break;
 
-            // ── 2. Conformar grupos ───────────────────────────────
             case 2:
                 if (!equiposCargados) {
                     cout << "  [!] Cargue los equipos primero (opcion 1).\n";
@@ -174,7 +232,6 @@ int main() {
                 pausar();
                 break;
 
-            // ── 3. Simular torneo ─────────────────────────────────
             case 3:
                 if (!gruposConformados) {
                     cout << "  [!] Conforme los grupos primero (opcion 2).\n";
@@ -187,7 +244,6 @@ int main() {
                 pausar();
                 break;
 
-            // ── 4. Estadisticas ───────────────────────────────────
             case 4:
                 if (!torneoSimulado) {
                     cout << "  [!] Simule el torneo primero (opcion 3).\n";
@@ -199,41 +255,35 @@ int main() {
                 pausar();
                 break;
 
-            // ── 5. Tabla de grupo ─────────────────────────────────
             case 5:
                 verTablaGrupo(mundial, gruposConformados);
                 pausar();
                 break;
 
-            // ── 6. Partidos de fase ───────────────────────────────
             case 6:
                 verPartidosFase(mundial, torneoSimulado);
                 pausar();
                 break;
 
-            // ── 7. Jugadores de equipo ────────────────────────────
             case 7:
                 verJugadoresEquipo(mundial, equiposCargados);
                 pausar();
                 break;
 
-            // ── 8. Metricas de recursos ───────────────────────────
             case 8:
                 if (!equiposCargados) {
                     cout << "  [!] Ejecute al menos la opcion 1 para ver metricas.\n";
                 } else {
-                    cout << "\n=== Metricas de recursos ===\n";
                     string ultima = "";
-                    if      (statsGeneradas)    ultima = "generarEstadisticas";
-                    else if (torneoSimulado)     ultima = "simularTorneo";
-                    else if (gruposConformados)  ultima = "conformarGrupos";
-                    else                         ultima = "cargarEquipos";
+                    if      (statsGeneradas)   ultima = "generarEstadisticas";
+                    else if (torneoSimulado)    ultima = "simularTorneo";
+                    else if (gruposConformados) ultima = "conformarGrupos";
+                    else                        ultima = "cargarEquipos";
                     mundial.imprimirMetricas(ultima);
                 }
                 pausar();
                 break;
 
-            // ── 9. Flujo completo ─────────────────────────────────
             case 9:
                 cout << "\n=== Ejecutando flujo completo (1→2→3→4)... ===\n";
                 mundial.cargarEquipos();
@@ -248,7 +298,6 @@ int main() {
                 pausar();
                 break;
 
-            // ── 0. Salir ──────────────────────────────────────────
             case 0:
                 cout << "\n  Hasta luego!\n\n";
                 break;
