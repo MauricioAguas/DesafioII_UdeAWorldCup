@@ -27,8 +27,6 @@ Partido::~Partido() { if (resultado) delete resultado; }
 // Formula del enunciado (ecuacion 1):
 // lambda_A = mu * (GF_A / mu)^alpha * (GC_B / mu)^beta
 // alpha = 0.6, beta = 0.4, mu = 1.35
-// GF_A = promedio goles a favor de equipo atacante (historico)
-// GC_B = promedio goles en contra de equipo defensor (historico)
 float Partido::calcularGolesEsperados(Equipo* ataque, Equipo* defensa) {
     const float mu    = 1.35f;
     const float alpha = 0.6f;
@@ -40,7 +38,6 @@ float Partido::calcularGolesEsperados(Equipo* ataque, Equipo* defensa) {
     float gfa = (pjA > 0) ? (float)ataque->getGFA() / pjA : mu;
     float gcb = (pjD > 0) ? (float)defensa->getGEC() / pjD : mu;
 
-    // Evitar log(0) / pow(0) con minimo de 0.01
     if (gfa < 0.01f) gfa = 0.01f;
     if (gcb < 0.01f) gcb = 0.01f;
 
@@ -80,58 +77,134 @@ static void asignarTarjetasYFaltas(Jugador** conv) {
         }
         if ((rand()%10000) < 600)  { am++; if ((rand()%10000) < 115) am++; }
         int ro = (am >= 2) ? 1 : 0;
-        if (f > 0 || am > 0) {
+        if (f > 0 || am > 0)
             conv[i]->actualizarEstadisticas(0, 0, am, ro, f);
-        }
     }
 }
 
+// simularInterno: calcula marcador y convocados pero NO actualiza historicos.
+// Retorna c1 y c2 por referencia para que el caller los libere.
+static Resultado* simularInterno(Equipo* equipo1, Equipo* equipo2,
+                                  Jugador**& c1, Jugador**& c2,
+                                  bool forzarDesempate = false) {
+    c1 = equipo1->seleccionarConvocados();
+    c2 = equipo2->seleccionarConvocados();
+
+    float lambda1, lambda2;
+    // En prorroga usamos ranking directamente para no sesgar por estadisticas ya infladas
+    if (forzarDesempate) {
+        lambda1 = lambda2 = 0.5f; // un gol extra se decide por ranking
+    } else {
+        // calcularGolesEsperados necesita metodos publicos: llamamos a traves del partido
+        const float mu = 1.35f, alpha = 0.6f, beta = 0.4f;
+        auto golesEsp = [&](Equipo* at, Equipo* def) -> float {
+            int pjA = at->getPartidosJugados();
+            int pjD = def->getPartidosJugados();
+            float gfa = (pjA > 0) ? (float)at->getGFA()  / pjA : mu;
+            float gcb = (pjD > 0) ? (float)def->getGEC() / pjD : mu;
+            if (gfa < 0.01f) gfa = 0.01f;
+            if (gcb < 0.01f) gcb = 0.01f;
+            return mu * pow(gfa / mu, alpha) * pow(gcb / mu, beta);
+        };
+        lambda1 = golesEsp(equipo1, equipo2);
+        lambda2 = golesEsp(equipo2, equipo1);
+    }
+
+    int gf1, gf2;
+    if (forzarDesempate) {
+        // Un solo gol de diferencia decidido por ranking (menor = mejor)
+        int r1 = equipo1->getRanking(), r2 = equipo2->getRanking();
+        int umbral = (r1 + r2 > 0) ? (r2 * 100 / (r1 + r2)) : 50;
+        // base: mismo marcador que el partido normal (no lo conocemos aqui,
+        // asi que empezamos desde 0 para la prorroga y sumamos al total fuera)
+        gf1 = 0; gf2 = 0;
+        if ((rand() % 100) < umbral) gf1 = 1; else gf2 = 1;
+    } else {
+        gf1 = (int)(lambda1 + 0.5f) + (rand() % 3) - 1;
+        gf2 = (int)(lambda2 + 0.5f) + (rand() % 3) - 1;
+        if (gf1 < 0) gf1 = 0;
+        if (gf2 < 0) gf2 = 0;
+    }
+
+    Resultado* res = new Resultado(gf1, gf2, forzarDesempate, c1, c2);
+    res->calcularPosesion(equipo1->getRanking(), equipo2->getRanking());
+    distribuirGoles(c1, gf1, res, true);
+    distribuirGoles(c2, gf2, res, false);
+    asignarTarjetasYFaltas(c1);
+    asignarTarjetasYFaltas(c2);
+    return res;
+}
+
 void Partido::simular() {
-    Jugador** c1 = equipo1->seleccionarConvocados();
-    Jugador** c2 = equipo2->seleccionarConvocados();
+    Jugador *c1 = nullptr, *c2 = nullptr;
+    Jugador** pc1 = &c1; Jugador** pc2 = &c2; // no usamos lambdas aqui
+    // Llamada directa sin wrapper
+    Jugador** conv1 = equipo1->seleccionarConvocados();
+    Jugador** conv2 = equipo2->seleccionarConvocados();
 
     float lambda1 = calcularGolesEsperados(equipo1, equipo2);
     float lambda2 = calcularGolesEsperados(equipo2, equipo1);
 
-    // Redondear lambda y agregar variacion aleatoria [-1, +1]
     int gf1 = (int)(lambda1 + 0.5f) + (rand() % 3) - 1;
     int gf2 = (int)(lambda2 + 0.5f) + (rand() % 3) - 1;
     if (gf1 < 0) gf1 = 0;
     if (gf2 < 0) gf2 = 0;
 
-    resultado = new Resultado(gf1, gf2, false, c1, c2);
+    resultado = new Resultado(gf1, gf2, false, conv1, conv2);
     resultado->calcularPosesion(equipo1->getRanking(), equipo2->getRanking());
-    distribuirGoles(c1, gf1, resultado, true);
-    distribuirGoles(c2, gf2, resultado, false);
-    asignarTarjetasYFaltas(c1);
-    asignarTarjetasYFaltas(c2);
+    distribuirGoles(conv1, gf1, resultado, true);
+    distribuirGoles(conv2, gf2, resultado, false);
+    asignarTarjetasYFaltas(conv1);
+    asignarTarjetasYFaltas(conv2);
     resultado->actualizarHistoricos(equipo1, equipo2);
-    delete[] c1;
-    delete[] c2;
+    delete[] conv1;
+    delete[] conv2;
+    (void)pc1; (void)pc2;
 }
 
+// FIX Bug 1: simularConProrroga ya no llama simular() internamente.
+// Hace todo en un solo flujo para evitar doble actualizacion de historicos.
+// FIX Bug 2: libera los arrays de convocados de la prorroga correctamente.
 void Partido::simularConProrroga() {
-    simular();
-    if (resultado->getGfEquipo1() == resultado->getGfEquipo2()) {
-        int r1 = equipo1->getRanking();
-        int r2 = equipo2->getRanking();
+    // --- Tiempo reglamentario ---
+    Jugador** conv1 = equipo1->seleccionarConvocados();
+    Jugador** conv2 = equipo2->seleccionarConvocados();
+
+    float lambda1 = calcularGolesEsperados(equipo1, equipo2);
+    float lambda2 = calcularGolesEsperados(equipo2, equipo1);
+
+    int gf1 = (int)(lambda1 + 0.5f) + (rand() % 3) - 1;
+    int gf2 = (int)(lambda2 + 0.5f) + (rand() % 3) - 1;
+    if (gf1 < 0) gf1 = 0;
+    if (gf2 < 0) gf2 = 0;
+
+    // --- Prorroga si empate ---
+    bool prorroga = (gf1 == gf2);
+    if (prorroga) {
+        int r1 = equipo1->getRanking(), r2 = equipo2->getRanking();
         int umbral = (r1 + r2 > 0) ? (r2 * 100 / (r1 + r2)) : 50;
-        int gf1 = resultado->getGfEquipo1();
-        int gf2 = resultado->getGfEquipo2();
-        delete resultado;
-        resultado = nullptr;
-        Jugador** c1 = equipo1->seleccionarConvocados();
-        Jugador** c2 = equipo2->seleccionarConvocados();
-        if ((rand() % 100) < umbral) { gf1++; } else { gf2++; }
-        resultado = new Resultado(gf1, gf2, true, c1, c2);
-        resultado->calcularPosesion(r1, r2);
-        // Redistribuir TODOS los goles en el nuevo resultado
-        distribuirGoles(c1, gf1, resultado, true);
-        distribuirGoles(c2, gf2, resultado, false);
-        resultado->actualizarHistoricos(equipo1, equipo2);
-        delete[] c1;
-        delete[] c2;
+        if ((rand() % 100) < umbral) gf1++; else gf2++;
     }
+
+    // Crear resultado final (unico) y actualizar historicos UNA sola vez
+    resultado = new Resultado(gf1, gf2, prorroga, conv1, conv2);
+    // FIX Bug 3: posesion invertida -- menor ranking FIFA = mejor equipo.
+    // Equipo con menor ranking merece mas posesion, por eso usamos rankB / (rankA+rankB)
+    // donde rankB es el rival. Pero el calculo anterior ya era correcto conceptualmente;
+    // el error era que se interpretaba ranking alto = mejor. Ahora lo aclaramos:
+    // calcularPosesion(rankA, rankB) => posesionEq1 = rankB/(rankA+rankB)
+    // => si equipo1 tiene ranking 1 (mejor) y equipo2 tiene ranking 50,
+    //    posesion eq1 = 50/51 ≈ 0.98 → clampea a 0.65. Correcto: equipo mejor tiene mas posesion.
+    resultado->calcularPosesion(equipo1->getRanking(), equipo2->getRanking());
+    distribuirGoles(conv1, gf1, resultado, true);
+    distribuirGoles(conv2, gf2, resultado, false);
+    asignarTarjetasYFaltas(conv1);
+    asignarTarjetasYFaltas(conv2);
+    // FIX Bug 1: actualizarHistoricos se llama UNA sola vez aqui
+    resultado->actualizarHistoricos(equipo1, equipo2);
+    // FIX Bug 2: liberar los arrays de convocados (Resultado solo copia los punteros)
+    delete[] conv1;
+    delete[] conv2;
 }
 
 void Partido::imprimirResumen() {
@@ -148,15 +221,26 @@ void Partido::imprimirResumen() {
          << "%  |  " << equipo2->getPais() << " " << pos2 << "%";
 
     cout << "\nGoleadores " << equipo1->getPais() << ": ";
+    bool hayGol1 = false;
     for (int i = 0; i < 11; i++) {
-        if (resultado->getGolesPartido1(i) > 0)
-            cout << resultado->getConvocados1()[i]->getNumeroCamiseta() << " ";
+        if (resultado->getGolesPartido1(i) > 0) {
+            cout << resultado->getConvocados1()[i]->getNumeroCamiseta()
+                 << "(" << resultado->getGolesPartido1(i) << ") ";
+            hayGol1 = true;
+        }
     }
+    if (!hayGol1) cout << "ninguno";
+
     cout << "\nGoleadores " << equipo2->getPais() << ": ";
+    bool hayGol2 = false;
     for (int i = 0; i < 11; i++) {
-        if (resultado->getGolesPartido2(i) > 0)
-            cout << resultado->getConvocados2()[i]->getNumeroCamiseta() << " ";
+        if (resultado->getGolesPartido2(i) > 0) {
+            cout << resultado->getConvocados2()[i]->getNumeroCamiseta()
+                 << "(" << resultado->getGolesPartido2(i) << ") ";
+            hayGol2 = true;
+        }
     }
+    if (!hayGol2) cout << "ninguno";
     cout << endl;
 }
 
