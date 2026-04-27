@@ -92,10 +92,19 @@ void Grupo::generarTablaClasif() {
 }
 
 void Grupo::imprimirPartidos() {
+    // FIX: ordenar partidos cronologicamente antes de imprimir
+    Partido* ordenados[6];
+    int cnt = 0;
+    for (int i = 0; i < 6; i++) if (partidos[i]) ordenados[cnt++] = partidos[i];
+    for (int i = 0; i < cnt - 1; i++)
+        for (int j = 0; j < cnt - 1 - i; j++)
+            if (ordenados[j]->getFecha() > ordenados[j+1]->getFecha()) {
+                Partido* tmp = ordenados[j];
+                ordenados[j] = ordenados[j+1];
+                ordenados[j+1] = tmp;
+            }
     cout << "\n--- Partidos Grupo " << letra << " ---";
-    for (int i=0;i<6;i++) {
-        if (partidos[i]) partidos[i]->imprimirResumen();
-    }
+    for (int i = 0; i < cnt; i++) ordenados[i]->imprimirResumen();
 }
 
 void Grupo::imprimirTabla() {
