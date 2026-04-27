@@ -16,8 +16,13 @@ Grupo::~Grupo() {
 
 void Grupo::agregarEquipo(Equipo* e) { if (cantEquipos<4) equipos[cantEquipos++]=e; }
 
+// Metodo legacy — conservado para no romper llamadas existentes
 void Grupo::configurarPartidos(string fechaBase) {
-    int e1idx[6]={0,0,0,1,1,2}, e2idx[6]={1,2,3,2,3,3};
+    // Round-robin correcto: cada jornada cada equipo juega exactamente 1 partido
+    // Jornada 0: (E0,E1) y (E2,E3)
+    // Jornada 1: (E0,E2) y (E1,E3)
+    // Jornada 2: (E0,E3) y (E1,E2)
+    int e1idx[6]={0,2,0,1,0,1}, e2idx[6]={1,3,2,3,3,2};
     int offset = (letra-'A') % 4;
     int diasBase[3]={0+offset, 4+offset, 8+offset};
     int anio=stoi(fechaBase.substr(0,4)), mes=stoi(fechaBase.substr(5,2)), dia=stoi(fechaBase.substr(8,2));
@@ -27,6 +32,17 @@ void Grupo::configurarPartidos(string fechaBase) {
         while (dp>diasMes[mp]) { dp-=diasMes[mp]; mp++; if(mp>12){mp=1;ap++;} }
         string f=to_string(ap)+"-"+(mp<10?"0":"")+to_string(mp)+"-"+(dp<10?"0":"")+to_string(dp);
         partidos[p]=new Partido(f,"00:00","nombreSede",equipos[e1idx[p]],equipos[e2idx[p]]);
+    }
+}
+
+// Nuevo metodo: recibe las 6 fechas ya calculadas por el scheduler global de Mundial
+void Grupo::configurarPartidosConFechas(string fechas[6]) {
+    int e1idx[6]={0,0,0,1,1,2};
+    int e2idx[6]={1,2,3,2,3,3};
+    for (int p=0;p<6;p++) {
+        if (partidos[p]) { delete partidos[p]; partidos[p]=nullptr; }
+        partidos[p] = new Partido(fechas[p], "00:00", "nombreSede",
+                                  equipos[e1idx[p]], equipos[e2idx[p]]);
     }
 }
 
@@ -51,7 +67,6 @@ void Grupo::generarTablaClasif() {
         else if (gf1<gf2) puntos[i2]+=3;
         else { puntos[i1]++; puntos[i2]++; }
     }
-    // Ordenar por puntos > DG > GF (bubble sort)
     for (int i=0;i<3;i++) for (int j=0;j<3-i;j++) {
         bool sw=false;
         if (puntos[j]<puntos[j+1]) sw=true;
@@ -78,7 +93,6 @@ void Grupo::imprimirTabla() {
     for (int i=0;i<cantEquipos;i++) {
         cout << "\n " << (i+1) << "  | " << equipos[i]->getPais()
              << " (" << equipos[i]->getConfederacion() << ")";
-        // Padding para alinear columnas
         int len = equipos[i]->getPais().length() + equipos[i]->getConfederacion().length() + 3;
         for(int s=len;s<21;s++) cout<<" ";
         cout << "| " << puntos[i] << "   | " << difGoles[i] << "   | " << golesFavor[i];

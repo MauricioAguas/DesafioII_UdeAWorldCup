@@ -17,7 +17,10 @@ private:
 
     // --- Req V: medicion de recursos ---
     long long iteraciones;
-    long long calcularMemoria() ;
+    long long calcularMemoria();
+
+    // --- Scheduler global de fechas (fase de grupos) ---
+    void schedulerFaseGrupos();
 
 public:
     Mundial();

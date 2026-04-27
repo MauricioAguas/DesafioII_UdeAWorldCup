@@ -21,7 +21,8 @@ public:
     ~Grupo();
 
     void agregarEquipo(Equipo* e);
-    void configurarPartidos(string fechaBase);
+    void configurarPartidos(string fechaBase);          // legacy (no se usa)
+    void configurarPartidosConFechas(string fechas[6]); // scheduler global
     void simularPartidos();
     void generarTablaClasif();
     void imprimirTabla();
