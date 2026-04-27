@@ -78,7 +78,7 @@ static long long bytesFase(const Fase* f) {
 // ============================================================
 // calcularMemoria: suma todos los objetos vivos en heap
 // ============================================================
-long long Mundial::calcularMemoria() const {
+long long Mundial::calcularMemoria() {
     long long total = sizeof(Mundial); // el propio objeto Mundial (en stack en main)
 
     // Equipos y sus jugadores
@@ -103,7 +103,7 @@ long long Mundial::calcularMemoria() const {
 // ============================================================
 // imprimirMetricas
 // ============================================================
-void Mundial::imprimirMetricas(const string& nombreFunc) const {
+void Mundial::imprimirMetricas(const string& nombreFunc) {
     cout << "\n[Metricas - " << nombreFunc << "]\n";
     cout << "  Iteraciones ejecutadas : " << iteraciones << "\n";
     cout << "  Memoria consumida      : " << calcularMemoria() << " bytes\n";
@@ -269,7 +269,7 @@ void Mundial::conformarGrupos() {
     for (int g = 0; g < 12; g++) {
         cout << "Grupo " << letras[g] << ": ";
         for (int e = 0; e < grupos[g]->getCantEquipos(); e++) {
-            iteraciones++;
+            //iteraciones++;
             cout << grupos[g]->getEquipo(e)->getPais()
                  << " (" << grupos[g]->getEquipo(e)->getConfederacion() << ")  ";
         }

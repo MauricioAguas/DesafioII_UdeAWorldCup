@@ -244,7 +244,7 @@ void Partido::imprimirResumen() {
     cout << endl;
 }
 
-Resultado* Partido::getResultado() { return resultado; }
+Resultado* Partido::getResultado() const { return resultado; }
 Equipo*    Partido::getEquipo1()   { return equipo1; }
 Equipo*    Partido::getEquipo2()   { return equipo2; }
 string     Partido::getFecha()     { return fecha; }

@@ -18,7 +18,7 @@ public:
     Jugador(string nombre, string apellido, int numeroCamiseta, int golesIniciales = 0);
     ~Jugador();
 
-    string getNombre();
+    string getNombre() const;
     string getApellido();
     int    getNumeroCamiseta();
     EstadisticasJugador* getEstadisticas();

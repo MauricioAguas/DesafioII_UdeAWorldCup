@@ -27,7 +27,7 @@ public:
     void asignarGoleadores();
     void imprimirResumen();
 
-    Resultado* getResultado();
+    Resultado* getResultado() const;
     Equipo*    getEquipo1();
     Equipo*    getEquipo2();
     string     getFecha();

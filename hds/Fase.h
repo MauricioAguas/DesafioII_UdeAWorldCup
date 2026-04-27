@@ -34,8 +34,8 @@ public:
     string   getNombre();
     int      getCantGrupos();
     Grupo*   getGrupo(int i);
-    int      getCantPartidos();
-    Partido* getPartido(int i);
+    int      getCantPartidos() const;
+    Partido* getPartido(int i) const;
 };
 
 #endif

@@ -17,7 +17,7 @@ private:
 
     // --- Req V: medicion de recursos ---
     long long iteraciones;
-    long long calcularMemoria() const;
+    long long calcularMemoria() ;
 
 public:
     Mundial();
@@ -33,7 +33,7 @@ public:
     Equipo* getEquipoMasGoles();
     Equipo* getCampeon();
 
-    void imprimirMetricas(const string& nombreFunc) const;
+    void imprimirMetricas(const string& nombreFunc);
 
     // --- Getters para menu interactivo ---
     int     getCantEquipos()  const { return cantEquipos; }

@@ -22,41 +22,40 @@ void pausar() {
 
 void imprimirBanner() {
     cout << "\n";
-    cout << "  ╔══════════════════════════════════════════════════╗\n";
-    cout << "  ║          UdeA WorldCup Simulator 2026           ║\n";
-    cout << "  ║              Desafio II  ·  POO C++             ║\n";
-    cout << "  ╚══════════════════════════════════════════════════╝\n";
+    cout << "  +--------------------------------------------------+\n";
+    cout << "  |          UdeA WorldCup Simulator 2026           |\n";
+    cout << "  |              Desafio II  -  POO C++             |\n";
+    cout << "  +--------------------------------------------------+\n";
 }
 
 void imprimirEstado(bool cargado, bool grupos, bool torneo, bool stats) {
     cout << "\n  Estado: ";
-    cout << (cargado ? "[✓ Equipos] " : "[✗ Equipos] ");
-    cout << (grupos  ? "[✓ Grupos]  " : "[✗ Grupos]  ");
-    cout << (torneo  ? "[✓ Torneo]  " : "[✗ Torneo]  ");
-    cout << (stats   ? "[✓ Stats]"   : "[✗ Stats]");
+    cout << (cargado ? "[OK Equipos] " : "[-- Equipos] ");
+    cout << (grupos  ? "[OK Grupos]  " : "[-- Grupos]  ");
+    cout << (torneo  ? "[OK Torneo]  " : "[-- Torneo]  ");
+    cout << (stats   ? "[OK Stats]"    : "[-- Stats]");
     cout << "\n";
 }
 
 void imprimirMenu() {
-    cout << "\n  ┌─────────────────────────────────────────────────┐\n";
-    cout << "  │                    MENU PRINCIPAL               │\n";
-    cout << "  ├─────────────────────────────────────────────────┤\n";
-    cout << "  │  1. Cargar equipos desde CSV                    │\n";
-    cout << "  │  2. Conformar grupos (bombos)                   │\n";
-    cout << "  │  3. Simular torneo completo                     │\n";
-    cout << "  │  4. Generar estadisticas finales                │\n";
-    cout << "  ├─────────────────────────────────────────────────┤\n";
-    cout << "  │  5. Ver tabla de un grupo                       │\n";
-    cout << "  │  6. Ver partidos de una fase                    │\n";
-    cout << "  │  7. Ver jugadores de un equipo                  │\n";
-    cout << "  │  8. Ver metricas de recursos                    │\n";
-    cout << "  ├─────────────────────────────────────────────────┤\n";
-    cout << "  │  9. Ejecutar flujo completo (1→2→3→4)           │\n";
-    cout << "  │  0. Salir                                       │\n";
-    cout << "  └─────────────────────────────────────────────────┘\n";
+    cout << "\n  +-------------------------------------------------+\n";
+    cout << "  |                 MENU PRINCIPAL                  |\n";
+    cout << "  +-------------------------------------------------+\n";
+    cout << "  |  1. Cargar equipos desde CSV                    |\n";
+    cout << "  |  2. Conformar grupos (bombos)                   |\n";
+    cout << "  |  3. Simular torneo completo                     |\n";
+    cout << "  |  4. Generar estadisticas finales                |\n";
+    cout << "  +-------------------------------------------------+\n";
+    cout << "  |  5. Ver tabla de un grupo                       |\n";
+    cout << "  |  6. Ver partidos de una fase                    |\n";
+    cout << "  |  7. Ver jugadores de un equipo                  |\n";
+    cout << "  |  8. Ver metricas de recursos                    |\n";
+    cout << "  +-------------------------------------------------+\n";
+    cout << "  |  9. Ejecutar flujo completo (1->2->3->4)        |\n";
+    cout << "  |  0. Salir                                       |\n";
+    cout << "  +-------------------------------------------------+\n";
     cout << "  Opcion: ";
 }
-
 // ============================================================
 // OPCION 5: tabla de un grupo especifico
 // ============================================================
@@ -285,7 +284,7 @@ int main() {
                 break;
 
             case 9:
-                cout << "\n=== Ejecutando flujo completo (1→2→3→4)... ===\n";
+                cout << "\n=== Ejecutando flujo completo (1-2-3-4)... ===\n";
                 mundial.cargarEquipos();
                 equiposCargados = true;
                 mundial.conformarGrupos();

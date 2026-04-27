@@ -32,7 +32,7 @@ int Jugador::getGoles() {
     return estadisticas->getGoles();
 }
 
-string Jugador::getNombre()         { return nombre;         }
+string Jugador::getNombre()  const  { return nombre;         }
 string Jugador::getApellido()       { return apellido;       }
 int    Jugador::getNumeroCamiseta() { return numeroCamiseta; }
 EstadisticasJugador* Jugador::getEstadisticas() { return estadisticas; }

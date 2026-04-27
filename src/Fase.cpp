@@ -79,5 +79,5 @@ Equipo* Fase::getGanadorPartido(int i) {
 string   Fase::getNombre()       { return nombre; }
 int      Fase::getCantGrupos()   { return cantGrupos; }
 Grupo*   Fase::getGrupo(int i)   { return (i>=0&&i<cantGrupos)?grupos[i]:nullptr; }
-int      Fase::getCantPartidos() { return cantPartidos; }
-Partido* Fase::getPartido(int i) { return (i>=0&&i<cantPartidos)?partidos[i]:nullptr; }
+int      Fase::getCantPartidos() const { return cantPartidos; }
+Partido* Fase::getPartido(int i) const { return (i>=0&&i<cantPartidos)?partidos[i]:nullptr; }
