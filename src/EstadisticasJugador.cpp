@@ -16,8 +16,13 @@ void EstadisticasJugador::actualizar(int g, int min, int am, int ro, int fa) {
     if (min > 0) partidosJugados++;
 }
 
-int EstadisticasJugador::getGoles()   { return goles; }
-int EstadisticasJugador::getMinutos() { return minutosJugados; }
+int EstadisticasJugador::getGoles()          { return goles; }
+int EstadisticasJugador::getMinutos()        { return minutosJugados; }
+int EstadisticasJugador::getPartidosJugados(){ return partidosJugados; }
+int EstadisticasJugador::getAmarillas()      { return amarillas; }
+int EstadisticasJugador::getRojas()          { return rojas; }
+int EstadisticasJugador::getFaltas()         { return faltas; }
+int EstadisticasJugador::getAsistencias()    { return asistencias; }
 
 EstadisticasJugador EstadisticasJugador::operator+(const EstadisticasJugador& o) const {
     EstadisticasJugador r;

@@ -16,8 +16,14 @@ public:
     ~EstadisticasJugador();
 
     void actualizar(int goles, int minutos, int amarillas, int rojas, int faltas);
+
     int getGoles();
     int getMinutos();
+    int getPartidosJugados();
+    int getAmarillas();
+    int getRojas();
+    int getFaltas();
+    int getAsistencias();
 
     EstadisticasJugador operator+(const EstadisticasJugador& otro) const;
 };

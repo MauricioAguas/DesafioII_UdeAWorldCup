@@ -3,9 +3,6 @@
 #include "../hds/Mundial.h"
 using namespace std;
 
-// ============================================================
-// HELPERS DE PRESENTACION
-// ============================================================
 void limpiarPantalla() {
 #ifdef _WIN32
     system("cls");
@@ -57,12 +54,6 @@ void imprimirMenu() {
     cout << "  Opcion: ";
 }
 
-// ============================================================
-// OPCION 5: tabla de un grupo especifico
-// FIX: leer puntos/difGoles/golesFavor desde el objeto Grupo
-//      (no desde las estadisticas historicas del equipo).
-//      PJ, G, E, P se calculan contando los partidos del grupo.
-// ============================================================
 void verTablaGrupo(Mundial& m, bool grupos) {
     if (!grupos) { cout << "  [!] Primero debe conformar los grupos (opcion 2).\n"; return; }
     cout << "  Ingrese la letra del grupo (A-L): ";
@@ -73,7 +64,6 @@ void verTablaGrupo(Mundial& m, bool grupos) {
     Grupo* g = m.getGrupo(idx);
     if (!g) { cout << "  [!] Grupo no encontrado.\n"; return; }
 
-    // Calcular PJ, G, E, P para cada equipo leyendo los partidos del grupo
     int pj[4]={0}, gan[4]={0}, emp[4]={0}, per[4]={0};
     for (int p = 0; p < 6; p++) {
         Partido* par = g->getPartido(p);
@@ -131,12 +121,6 @@ void verTablaGrupo(Mundial& m, bool grupos) {
     }
 }
 
-// ============================================================
-// OPCION 6: partidos de una fase
-// FIX: para la Fase de Grupos los partidos viven dentro de cada
-//      Grupo, no en el array partidos[] de la Fase.
-//      Se itera sobre los grupos y sus partidos directamente.
-// ============================================================
 void verPartidosFase(Mundial& m, bool torneo) {
     if (!torneo) { cout << "  [!] Primero debe simular el torneo (opcion 3).\n"; return; }
 
@@ -151,7 +135,6 @@ void verPartidosFase(Mundial& m, bool torneo) {
     int op; cin >> op;
     if (op < 1 || op > 7) { cout << "  [!] Opcion invalida.\n"; return; }
 
-    // Buscar la fase por nombre
     Fase* fase = nullptr;
     for (int i = 0; i < m.getCantFases(); i++) {
         Fase* f = m.getFase(i);
@@ -162,7 +145,6 @@ void verPartidosFase(Mundial& m, bool torneo) {
     cout << "\n  === " << fase->getNombre() << " ===\n";
     cout << "  " << string(60, '-') << "\n";
 
-    // FIX: Fase de Grupos — iterar grupos y sus partidos internos
     if (fase->getNombre() == "Fase de Grupos") {
         for (int g = 0; g < fase->getCantGrupos(); g++) {
             Grupo* gr = fase->getGrupo(g);
@@ -183,7 +165,6 @@ void verPartidosFase(Mundial& m, bool torneo) {
             }
         }
     } else {
-        // Fases eliminatorias — partidos directos en la fase
         for (int p = 0; p < fase->getCantPartidos(); p++) {
             Partido* par = fase->getPartido(p);
             if (!par) continue;
@@ -201,7 +182,7 @@ void verPartidosFase(Mundial& m, bool torneo) {
 }
 
 // ============================================================
-// OPCION 7: jugadores de un equipo
+// OPCION 7: jugadores de un equipo — muestra todas las stats
 // ============================================================
 void verJugadoresEquipo(Mundial& m, bool cargado) {
     if (!cargado) { cout << "  [!] Primero debe cargar los equipos (opcion 1).\n"; return; }
@@ -222,34 +203,47 @@ void verJugadoresEquipo(Mundial& m, bool cargado) {
     cout << "\n  === Plantilla: " << encontrado->getPais()
          << " (" << encontrado->getConfederacion() << ") ==="
          << "  Ranking FIFA: " << encontrado->getRanking() << "\n";
-    cout << "  " << string(52, '-') << "\n";
-    cout << "  #  " << left;
-    cout.width(22); cout << "Nombre";
+    cout << "  " << string(80, '-') << "\n";
+    cout << "  " << left;
+    cout.width(3);  cout << "#";
+    cout.width(14); cout << "Nombre";
     cout.width(14); cout << "Apellido";
-    cout << "Goles" << "\n";
-    cout << "  " << string(52, '-') << "\n";
+    cout.width(5);  cout << "PJ";
+    cout.width(7);  cout << "Min";
+    cout.width(7);  cout << "Goles";
+    cout.width(7);  cout << "Asist";
+    cout.width(5);  cout << "AM";
+    cout.width(5);  cout << "RO";
+    cout.width(7);  cout << "Faltas";
+    cout << "\n";
+    cout << "  " << string(80, '-') << "\n";
 
     for (int j = 0; j < encontrado->getTamanoPlantilla(); j++) {
         Jugador* jug = encontrado->getJugador(j);
         if (!jug) continue;
+        EstadisticasJugador* est = jug->getEstadisticas();
         cout << "  ";
         cout.width(3);  cout << left << jug->getNumeroCamiseta();
-        cout.width(22); cout << jug->getNombre();
+        cout.width(14); cout << jug->getNombre();
         cout.width(14); cout << jug->getApellido();
-        cout << jug->getGoles() << "\n";
+        cout.width(5);  cout << est->getPartidosJugados();
+        cout.width(7);  cout << est->getMinutos();
+        cout.width(7);  cout << est->getGoles();
+        cout.width(7);  cout << est->getAsistencias();
+        cout.width(5);  cout << est->getAmarillas();
+        cout.width(5);  cout << est->getRojas();
+        cout.width(7);  cout << est->getFaltas();
+        cout << "\n";
     }
 }
 
-// ============================================================
-// MAIN
-// ============================================================
 int main() {
     Mundial mundial(2026, 48);
 
-    bool equiposCargados  = false;
+    bool equiposCargados   = false;
     bool gruposConformados = false;
-    bool torneoSimulado   = false;
-    bool statsGeneradas   = false;
+    bool torneoSimulado    = false;
+    bool statsGeneradas    = false;
 
     int opcion = -1;
 
