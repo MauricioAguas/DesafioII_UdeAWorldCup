@@ -16,12 +16,8 @@ Grupo::~Grupo() {
 
 void Grupo::agregarEquipo(Equipo* e) { if (cantEquipos<4) equipos[cantEquipos++]=e; }
 
-// Metodo legacy — conservado para no romper llamadas existentes
+// Metodo legacy
 void Grupo::configurarPartidos(string fechaBase) {
-    // Round-robin correcto: cada jornada cada equipo juega exactamente 1 partido
-    // Jornada 0: (E0,E1) y (E2,E3)
-    // Jornada 1: (E0,E2) y (E1,E3)
-    // Jornada 2: (E0,E3) y (E1,E2)
     int e1idx[6]={0,2,0,1,0,1}, e2idx[6]={1,3,2,3,3,2};
     int offset = (letra-'A') % 4;
     int diasBase[3]={0+offset, 4+offset, 8+offset};
@@ -31,7 +27,12 @@ void Grupo::configurarPartidos(string fechaBase) {
         int gf=p/2, dp=dia+diasBase[gf], mp=mes, ap=anio;
         while (dp>diasMes[mp]) { dp-=diasMes[mp]; mp++; if(mp>12){mp=1;ap++;} }
         string f=to_string(ap)+"-"+(mp<10?"0":"")+to_string(mp)+"-"+(dp<10?"0":"")+to_string(dp);
-        partidos[p]=new Partido(f,"00:00","nombreSede",equipos[e1idx[p]],equipos[e2idx[p]]);
+        Equipo* ea = equipos[e1idx[p]];
+        Equipo* eb = equipos[e2idx[p]];
+        if (ea && eb && ea != eb)
+            partidos[p]=new Partido(f,"00:00","nombreSede",ea,eb);
+        else
+            partidos[p]=nullptr;
     }
 }
 
@@ -41,13 +42,21 @@ void Grupo::configurarPartidosConFechas(string fechas[6]) {
     int e2idx[6]={1,2,3,2,3,3};
     for (int p=0;p<6;p++) {
         if (partidos[p]) { delete partidos[p]; partidos[p]=nullptr; }
-        partidos[p] = new Partido(fechas[p], "00:00", "nombreSede",
-                                  equipos[e1idx[p]], equipos[e2idx[p]]);
+        Equipo* ea = (e1idx[p] < cantEquipos) ? equipos[e1idx[p]] : nullptr;
+        Equipo* eb = (e2idx[p] < cantEquipos) ? equipos[e2idx[p]] : nullptr;
+        if (ea && eb && ea != eb)
+            partidos[p] = new Partido(fechas[p], "00:00", "nombreSede", ea, eb);
+        else
+            partidos[p] = nullptr;
     }
 }
 
 void Grupo::simularPartidos() {
-    for (int i=0;i<6;i++) if (partidos[i]) partidos[i]->simular();
+    for (int i=0;i<6;i++) {
+        if (!partidos[i]) continue;
+        if (partidos[i]->getEquipo1() == partidos[i]->getEquipo2()) continue;
+        partidos[i]->simular();
+    }
 }
 
 void Grupo::generarTablaClasif() {
@@ -58,6 +67,7 @@ void Grupo::generarTablaClasif() {
         if (!res) continue;
         int gf1=res->getGfEquipo1(), gf2=res->getGfEquipo2();
         Equipo* eq1=partidos[p]->getEquipo1(), *eq2=partidos[p]->getEquipo2();
+        if (!eq1 || !eq2 || eq1==eq2) continue;
         int i1=-1, i2=-1;
         for (int i=0;i<4;i++) { if(equipos[i]==eq1) i1=i; if(equipos[i]==eq2) i2=i; }
         if (i1<0||i2<0) continue;
@@ -107,3 +117,4 @@ int      Grupo::getCantEquipos()      { return cantEquipos; }
 int      Grupo::getPuntos(int i)      { return (i>=0&&i<4)?puntos[i]:0; }
 int      Grupo::getDifGoles(int i)    { return (i>=0&&i<4)?difGoles[i]:0; }
 int      Grupo::getGolesFavor(int i)  { return (i>=0&&i<4)?golesFavor[i]:0; }
+Partido* Grupo::getPartido(int i)     { return (i>=0&&i<6)?partidos[i]:nullptr; }

@@ -195,25 +195,12 @@ void Mundial::conformarGrupos() {
                     && puedeEntrar(grupos[g], eq))
                     disponibles[nd++] = g;
             }
-            // FIX: fallback respeta espacio y unicidad, pero relaja restriccion
-            // de confederacion cuando matematicamente es imposible cumplirla
-            // (ocurre con 17 UEFA en 12 grupos, limite 2/grupo: 31 no-UEFA > 24 slots)
             if (nd == 0) {
                 for (int g = 0; g < 12; g++) {
                     iteraciones++;
                     if (grupos[g]->getCantEquipos() < 4
-                        && !equipoYaEnGrupo(grupos[g], eq)
-                        && puedeEntrar(grupos[g], eq))
+                        && !equipoYaEnGrupo(grupos[g], eq))
                         disponibles[nd++] = g;
-                }
-                // Segunda relajacion: solo espacio y unicidad
-                if (nd == 0) {
-                    for (int g = 0; g < 12; g++) {
-                        iteraciones++;
-                        if (grupos[g]->getCantEquipos() < 4
-                            && !equipoYaEnGrupo(grupos[g], eq))
-                            disponibles[nd++] = g;
-                    }
                 }
             }
             if (nd == 0) {
@@ -239,11 +226,6 @@ void Mundial::conformarGrupos() {
 
 // ============================================================
 // SCHEDULER GLOBAL de fechas para la fase de grupos
-// Reglas del enunciado:
-//   - Max 4 partidos por dia en todo el mundial
-//   - Un equipo no puede jugar dos partidos en un lapso de 3 dias
-//   - Inicio: 2026-06-20  (dia base = 0)
-//   - Ventana: 19 dias (dias 0..18)  <-- FIX: limite estricto dia 18
 // ============================================================
 static string sumarDias(int diaOffset) {
     int anio = 2026, mes = 6, dia = 20;
@@ -260,7 +242,6 @@ void Mundial::schedulerFaseGrupos() {
     int e1idx[6] = {0,0,0,1,1,2};
     int e2idx[6] = {1,2,3,2,3,3};
 
-    // FIX: ventana estricta de 19 dias (0..18), arreglo dimensionado a 19
     const int MAX_DIA = 18;
     int partidosPorDia[19] = {0};
 
@@ -325,8 +306,7 @@ void Mundial::schedulerFaseGrupos() {
 }
 
 // ============================================================
-// helper: devuelve el indice de grupo (0..11) al que pertenece
-// un equipo en la fase de grupos. Retorna -1 si no lo encuentra.
+// helper: devuelve el indice de grupo al que pertenece un equipo
 // ============================================================
 static int grupoDeEquipo(Fase* fg, Equipo* eq) {
     for (int g = 0; g < fg->getCantGrupos(); g++) {
@@ -354,7 +334,6 @@ void Mundial::simularTorneo() {
     faseGrupos->imprimirResultados();
     fases[cantFases++] = faseGrupos;
 
-    // FIX: fecha fija 2026-07-10 para R16 segun enunciado
     Fase* faseR16 = new Fase("Dieciseisavos (R16)", "eliminacion", "2026-07-10");
     armarR16(faseGrupos, faseR16);
 
@@ -437,16 +416,9 @@ void Mundial::simularTorneo() {
 }
 
 // ============================================================
-// helpers armarR16
+// helper: comparar terceros por pts > dg > gf
 // ============================================================
-static bool mejorTercero(Grupo* a, Grupo* b) {
-    Equipo** clA = a->obtenerClasificados();
-    Equipo** clB = b->obtenerClasificados();
-    if (!clA[2] || !clB[2]) return false;
-    int idxA = -1, idxB = -1;
-    for (int i = 0; i < a->getCantEquipos(); i++) if (a->getEquipo(i)==clA[2]) { idxA=i; break; }
-    for (int i = 0; i < b->getCantEquipos(); i++) if (b->getEquipo(i)==clB[2]) { idxB=i; break; }
-    if (idxA < 0 || idxB < 0) return false;
+static bool mejorTercero(Grupo* a, int idxA, Grupo* b, int idxB) {
     if (a->getPuntos(idxA) != b->getPuntos(idxB))
         return a->getPuntos(idxA) > b->getPuntos(idxB);
     if (a->getDifGoles(idxA) != b->getDifGoles(idxB))
@@ -454,118 +426,205 @@ static bool mejorTercero(Grupo* a, Grupo* b) {
     return a->getGolesFavor(idxA) > b->getGolesFavor(idxB);
 }
 
+// ============================================================
+// armarR16 — implementa las 3 reglas del enunciado:
+//   Regla 1: Los 12 primeros de grupo enfrentan a los 8 mejores terceros.
+//   Regla 2: Los 4 peores segundos enfrentan al resto de primeros sin rival aun.
+//   Regla 3: Los 8 mejores segundos se enfrentan entre si.
+//   Restriccion: no pueden enfrentarse equipos del mismo grupo.
+// ============================================================
 void Mundial::armarR16(Fase* fg, Fase* r16) {
-    int cantG = fg->getCantGrupos();
-    Equipo* enR16[48]; int nR16 = 0;
+    int cantG = fg->getCantGrupos(); // 12
 
-    auto yaEnR16 = [&](Equipo* e) -> bool {
-        for (int i = 0; i < nR16; i++) { iteraciones++; if (enR16[i]==e) return true; }
-        return false;
-    };
-    auto registrar = [&](Equipo* e) {
-        if (e && !yaEnR16(e)) enR16[nR16++] = e;
-    };
+    // --- Recolectar 1ros, 2dos y 3ros de cada grupo ---
+    Equipo* primeros[12];  int grupoPrimero[12];
+    Equipo* segundos[12];  int grupoSegundo[12];
+    Equipo* todosT[12];    int grupoTercero[12]; int ptsT[12]; int dgT[12]; int gfT[12];
+    int nP = 0, nS = 0, nT = 0;
 
-    for (int g = 0; g + 1 < cantG; g += 2) {
+    for (int g = 0; g < cantG; g++) {
         iteraciones++;
-        Grupo* ga = fg->getGrupo(g);
-        Grupo* gb = fg->getGrupo(g+1);
-        if (!ga || !gb) continue;
-        // FIX: guard — verificar que cada grupo tenga al menos 2 clasificados
-        if (ga->getCantEquipos() < 2 || gb->getCantEquipos() < 2) continue;
-
-        Equipo** clA = ga->obtenerClasificados();
-        Equipo** clB = gb->obtenerClasificados();
-        Equipo* g1a = clA[0];
-        Equipo* g2a = clA[1];
-        Equipo* g1b = clB[0];
-        Equipo* g2b = clB[1];
-
-        bool cruceOk1 = (g1a && g2b && grupoDeEquipo(fg,g1a) != grupoDeEquipo(fg,g2b));
-        bool cruceOk2 = (g1b && g2a && grupoDeEquipo(fg,g1b) != grupoDeEquipo(fg,g2a));
-
-        if (!cruceOk1 && g1a && g2a &&
-            grupoDeEquipo(fg,g1a) != grupoDeEquipo(fg,g2a) &&
-            !yaEnR16(g1a) && !yaEnR16(g2a)) {
-            r16->agregarPartido(new Partido("2026-07-10","00:00","nombreSede",g1a,g2a));
-            registrar(g1a); registrar(g2a);
-        } else if (g1a && g2b && !yaEnR16(g1a) && !yaEnR16(g2b)) {
-            r16->agregarPartido(new Partido("2026-07-10","00:00","nombreSede",g1a,g2b));
-            registrar(g1a); registrar(g2b);
-        }
-
-        if (!cruceOk2 && g1b && g2b &&
-            grupoDeEquipo(fg,g1b) != grupoDeEquipo(fg,g2b) &&
-            !yaEnR16(g1b) && !yaEnR16(g2b)) {
-            r16->agregarPartido(new Partido("2026-07-10","00:00","nombreSede",g1b,g2b));
-            registrar(g1b); registrar(g2b);
-        } else if (g1b && g2a && !yaEnR16(g1b) && !yaEnR16(g2a)) {
-            r16->agregarPartido(new Partido("2026-07-10","00:00","nombreSede",g1b,g2a));
-            registrar(g1b); registrar(g2a);
-        }
+        Grupo* gr = fg->getGrupo(g);
+        if (!gr || gr->getCantEquipos() < 3) continue;
+        Equipo** cl = gr->obtenerClasificados();
+        primeros[nP] = cl[0]; grupoPrimero[nP++] = g;
+        segundos[nS] = cl[1]; grupoSegundo[nS++] = g;
+        // buscar indice del 3ro en el grupo para obtener sus metricas
+        int idx3 = -1;
+        for (int i = 0; i < gr->getCantEquipos(); i++)
+            if (gr->getEquipo(i) == cl[2]) { idx3 = i; break; }
+        todosT[nT]    = cl[2];
+        grupoTercero[nT] = g;
+        ptsT[nT] = (idx3 >= 0) ? gr->getPuntos(idx3)    : 0;
+        dgT[nT]  = (idx3 >= 0) ? gr->getDifGoles(idx3)  : 0;
+        gfT[nT]  = (idx3 >= 0) ? gr->getGolesFavor(idx3): 0;
+        nT++;
     }
 
-    int ordenGrupos[12];
-    for (int i = 0; i < cantG; i++) { ordenGrupos[i] = i; iteraciones++; }
-    for (int i = 0; i < cantG-1; i++) {
-        for (int j = 0; j < cantG-1-i; j++) {
+    // --- Ordenar terceros de mejor a peor (bubble sort) ---
+    for (int i = 0; i < nT - 1; i++) {
+        for (int j = 0; j < nT - 1 - i; j++) {
             iteraciones++;
-            Grupo* ga = fg->getGrupo(ordenGrupos[j]);
-            Grupo* gb = fg->getGrupo(ordenGrupos[j+1]);
-            if (ga && gb && mejorTercero(gb, ga))
-                swap(ordenGrupos[j], ordenGrupos[j+1]);
+            bool swap_needed = false;
+            if (ptsT[j] < ptsT[j+1]) swap_needed = true;
+            else if (ptsT[j] == ptsT[j+1] && dgT[j] < dgT[j+1]) swap_needed = true;
+            else if (ptsT[j] == ptsT[j+1] && dgT[j] == dgT[j+1] && gfT[j] < gfT[j+1]) swap_needed = true;
+            if (swap_needed) {
+                swap(todosT[j],     todosT[j+1]);
+                swap(grupoTercero[j], grupoTercero[j+1]);
+                swap(ptsT[j],       ptsT[j+1]);
+                swap(dgT[j],        dgT[j+1]);
+                swap(gfT[j],        gfT[j+1]);
+            }
         }
     }
 
-    Equipo* terceros[8]; int nT = 0;
-    int grupoDelTercero[8];
-    for (int k = 0; k < cantG && nT < 8; k++) {
-        iteraciones++;
-        Grupo* gt = fg->getGrupo(ordenGrupos[k]);
-        if (!gt) continue;
-        // FIX: guard — verificar que el grupo tenga al menos 3 equipos clasificados
-        if (gt->getCantEquipos() < 3) continue;
-        Equipo** clT = gt->obtenerClasificados();
-        Equipo* t3 = clT[2];
-        if (t3 && !yaEnR16(t3)) {
-            terceros[nT] = t3;
-            grupoDelTercero[nT] = ordenGrupos[k];
-            nT++;
-        }
-    }
+    // Los 8 primeros en el ranking son los mejores terceros clasificados
+    // Los 4 ultimos son eliminados
+    int mejores8T[8];   int grupoDe8T[8];
+    int peores4T[4];    int grupoDe4T[4];
+    for (int i = 0; i < 8 && i < nT; i++) { mejores8T[i] = i; grupoDe8T[i] = grupoTercero[i]; iteraciones++; }
+    for (int i = 8; i < nT && (i-8) < 4; i++) { peores4T[i-8] = i; grupoDe4T[i-8] = grupoTercero[i]; iteraciones++; }
 
-    for (int t = 0; t < nT; t++) {
+    // --- Control de equipos ya emparejados ---
+    bool primeroUsado[12] = {false};
+    bool segundoUsado[12] = {false};
+    bool terceroUsado[8]  = {false};
+
+    // Helper: agregar partido al fixture
+    auto agregarPartido = [&](Equipo* e1, Equipo* e2) {
+        r16->agregarPartido(new Partido("2026-07-10","00:00","nombreSede",e1,e2));
         iteraciones++;
-        Equipo* t3 = terceros[t];
-        if (yaEnR16(t3)) continue;
+    };
+
+    // -------------------------------------------------------
+    // REGLA 1: 12 primeros vs 8 mejores terceros
+    //   Restriccion: no pueden ser del mismo grupo
+    //   Asignacion greedy: para cada tercero, buscar el primer
+    //   primero disponible de distinto grupo.
+    // -------------------------------------------------------
+    for (int t = 0; t < 8; t++) {
+        iteraciones++;
+        int idxT = mejores8T[t];
+        Equipo* tercero = todosT[idxT];
+        int gT = grupoDe8T[t];
         Equipo* rival = nullptr;
-        for (int r = 0; r < cantG && !rival; r++) {
+        int rivalP = -1;
+        for (int p = 0; p < nP && !rival; p++) {
             iteraciones++;
-            if (r == grupoDelTercero[t]) continue;
-            Grupo* gr = fg->getGrupo(r);
-            if (!gr || gr->getCantEquipos() < 1) continue;
-            Equipo* r1 = gr->obtenerClasificados()[0];
-            if (r1 && !yaEnR16(r1) && grupoDeEquipo(fg,r1) != grupoDelTercero[t])
-                { rival = r1; }
+            if (primeroUsado[p]) continue;
+            if (grupoPrimero[p] == gT) continue; // mismo grupo
+            rival = primeros[p];
+            rivalP = p;
         }
-        for (int r = 0; r < cantG && !rival; r++) {
+        if (rival && tercero) {
+            agregarPartido(primeros[rivalP], tercero);
+            primeroUsado[rivalP] = true;
+            terceroUsado[t] = true;
+        }
+    }
+
+    // -------------------------------------------------------
+    // REGLA 2: Primeros que aun no tienen rival enfrentan
+    //   a los 4 peores segundos.
+    //   Restriccion: no mismo grupo.
+    // -------------------------------------------------------
+    // Recolectar primeros sin rival
+    int sinRival[12]; int nSR = 0;
+    for (int p = 0; p < nP; p++) { iteraciones++; if (!primeroUsado[p]) sinRival[nSR++] = p; }
+
+    // Ordenar peores segundos por su posicion en la tabla (ya estan en orden de grupos)
+    // Los 4 peores segundos son los que tienen menos pts/dg/gf entre los 12 segundos
+    // Ordenar segundos de peor a mejor
+    int idxSeg[12]; for (int i = 0; i < nS; i++) idxSeg[i] = i;
+    for (int i = 0; i < nS - 1; i++) {
+        for (int j = 0; j < nS - 1 - i; j++) {
             iteraciones++;
-            if (r == grupoDelTercero[t]) continue;
-            Grupo* gr = fg->getGrupo(r);
-            if (!gr || gr->getCantEquipos() < 2) continue;
-            Equipo* r2 = gr->obtenerClasificados()[1];
-            if (r2 && !yaEnR16(r2) && grupoDeEquipo(fg,r2) != grupoDelTercero[t])
-                { rival = r2; }
+            Grupo* ga = fg->getGrupo(grupoSegundo[idxSeg[j]]);
+            Grupo* gb = fg->getGrupo(grupoSegundo[idxSeg[j+1]]);
+            if (!ga || !gb) continue;
+            // encontrar idx del 2do en cada grupo
+            int iA = -1, iB = -1;
+            for (int k = 0; k < ga->getCantEquipos(); k++)
+                if (ga->getEquipo(k) == segundos[idxSeg[j]]) { iA = k; break; }
+            for (int k = 0; k < gb->getCantEquipos(); k++)
+                if (gb->getEquipo(k) == segundos[idxSeg[j+1]]) { iB = k; break; }
+            if (iA < 0 || iB < 0) continue;
+            // swap si j es MEJOR que j+1 (queremos peores primero)
+            if (mejorTercero(ga, iA, gb, iB))
+                swap(idxSeg[j], idxSeg[j+1]);
         }
-        for (int u = 0; u < nT && !rival; u++) {
+    }
+    // Primeros 4 en idxSeg son los 4 peores segundos
+    int peoresS[4]; int grupoPeoresS[4]; int nPS = 0;
+    for (int i = 0; i < 4 && i < nS; i++) {
+        iteraciones++;
+        peoresS[nPS] = idxSeg[i];
+        grupoPeoresS[nPS] = grupoSegundo[idxSeg[i]];
+        nPS++;
+    }
+    bool peoresSUsado[4] = {false};
+
+    for (int s = 0; s < nPS; s++) {
+        iteraciones++;
+        Equipo* seg = segundos[peoresS[s]];
+        int gS = grupoPeoresS[s];
+        Equipo* rival = nullptr;
+        int rivalSR = -1;
+        for (int r = 0; r < nSR && !rival; r++) {
             iteraciones++;
-            if (u == t) continue;
-            if (grupoDelTercero[u] == grupoDelTercero[t]) continue;
-            if (!yaEnR16(terceros[u])) { rival = terceros[u]; }
+            int p = sinRival[r];
+            if (primeroUsado[p]) continue;
+            if (grupoPrimero[p] == gS) continue;
+            rival = primeros[p];
+            rivalSR = p;
         }
-        if (t3 && rival) {
-            r16->agregarPartido(new Partido("2026-07-10","00:00","nombreSede",t3,rival));
-            registrar(t3); registrar(rival);
+        if (rival && seg) {
+            agregarPartido(rival, seg);
+            primeroUsado[rivalSR] = true;
+            segundoUsado[peoresS[s]] = true;
+            peoresSUsado[s] = true;
+        }
+    }
+
+    // -------------------------------------------------------
+    // REGLA 3: Los 8 mejores segundos se enfrentan entre si.
+    //   Restriccion: no mismo grupo.
+    //   Tomamos los segundos que aun no fueron usados (los 8 mejores).
+    // -------------------------------------------------------
+    // Recolectar segundos disponibles (no usados en regla 2)
+    Equipo* mejoresS[8]; int grupoMejoresS[8]; int nMS = 0;
+    for (int i = 4; i < nS && nMS < 8; i++) {
+        iteraciones++;
+        int s = idxSeg[i]; // de mejor a peor (los mejores estan al final del sort peor->mejor)
+        if (!segundoUsado[s]) {
+            mejoresS[nMS] = segundos[s];
+            grupoMejoresS[nMS] = grupoSegundo[s];
+            nMS++;
+        }
+    }
+    // Tambien agregar cualquier segundo que haya quedado sin usar de los primeros 4
+    for (int s = 0; s < nPS; s++) {
+        iteraciones++;
+        if (!peoresSUsado[s] && !segundoUsado[peoresS[s]] && nMS < 8) {
+            mejoresS[nMS] = segundos[peoresS[s]];
+            grupoMejoresS[nMS] = grupoPeoresS[s];
+            nMS++;
+        }
+    }
+
+    bool mejoresSUsado[8] = {false};
+    for (int i = 0; i < nMS; i++) {
+        iteraciones++;
+        if (mejoresSUsado[i]) continue;
+        for (int j = i + 1; j < nMS; j++) {
+            iteraciones++;
+            if (mejoresSUsado[j]) continue;
+            if (grupoMejoresS[i] == grupoMejoresS[j]) continue;
+            agregarPartido(mejoresS[i], mejoresS[j]);
+            mejoresSUsado[i] = true;
+            mejoresSUsado[j] = true;
+            break;
         }
     }
 }

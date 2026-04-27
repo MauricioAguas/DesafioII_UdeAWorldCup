@@ -35,6 +35,7 @@ public:
     int      getPuntos(int i);
     int      getDifGoles(int i);
     int      getGolesFavor(int i);
+    Partido* getPartido(int i);  // getter para acceder a partidos del grupo
 };
 
 #endif

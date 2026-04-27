@@ -56,8 +56,12 @@ void imprimirMenu() {
     cout << "  +-------------------------------------------------+\n";
     cout << "  Opcion: ";
 }
+
 // ============================================================
 // OPCION 5: tabla de un grupo especifico
+// FIX: leer puntos/difGoles/golesFavor desde el objeto Grupo
+//      (no desde las estadisticas historicas del equipo).
+//      PJ, G, E, P se calculan contando los partidos del grupo.
 // ============================================================
 void verTablaGrupo(Mundial& m, bool grupos) {
     if (!grupos) { cout << "  [!] Primero debe conformar los grupos (opcion 2).\n"; return; }
@@ -69,7 +73,30 @@ void verTablaGrupo(Mundial& m, bool grupos) {
     Grupo* g = m.getGrupo(idx);
     if (!g) { cout << "  [!] Grupo no encontrado.\n"; return; }
 
-    cout << "\n  === Grupo " << letra << " ==="  << "\n";
+    // Calcular PJ, G, E, P para cada equipo leyendo los partidos del grupo
+    int pj[4]={0}, gan[4]={0}, emp[4]={0}, per[4]={0};
+    for (int p = 0; p < 6; p++) {
+        Partido* par = g->getPartido(p);
+        if (!par) continue;
+        Resultado* res = par->getResultado();
+        if (!res) continue;
+        Equipo* e1 = par->getEquipo1();
+        Equipo* e2 = par->getEquipo2();
+        int gf1 = res->getGfEquipo1();
+        int gf2 = res->getGfEquipo2();
+        int i1 = -1, i2 = -1;
+        for (int k = 0; k < g->getCantEquipos(); k++) {
+            if (g->getEquipo(k) == e1) i1 = k;
+            if (g->getEquipo(k) == e2) i2 = k;
+        }
+        if (i1 < 0 || i2 < 0) continue;
+        pj[i1]++; pj[i2]++;
+        if (gf1 > gf2)      { gan[i1]++; per[i2]++; }
+        else if (gf1 < gf2) { gan[i2]++; per[i1]++; }
+        else                 { emp[i1]++; emp[i2]++; }
+    }
+
+    cout << "\n  === Grupo " << letra << " ===" << "\n";
     cout << "  " << left;
     cout.width(22); cout << "Equipo";
     cout.width(6);  cout << "PJ";
@@ -86,17 +113,19 @@ void verTablaGrupo(Mundial& m, bool grupos) {
     for (int i = 0; i < g->getCantEquipos(); i++) {
         Equipo* e = g->getEquipo(i);
         if (!e) continue;
-        EstadisticasEquipo* st = e->getEstadisticas();
-        int pts = st->getGanados()*3 + st->getEmpatados();
+        int gf  = g->getGolesFavor(i);
+        int dif = g->getDifGoles(i);
+        int gc  = gf - dif;
+        int pts = g->getPuntos(i);
         cout << "  ";
         cout.width(22); cout << left << e->getPais();
-        cout.width(6);  cout << e->getPartidosJugados();
-        cout.width(6);  cout << st->getGanados();
-        cout.width(6);  cout << st->getEmpatados();
-        cout.width(6);  cout << st->getPerdidos();
-        cout.width(6);  cout << st->getGolesFavor();
-        cout.width(6);  cout << st->getGolesContra();
-        cout.width(6);  cout << (st->getGolesFavor() - st->getGolesContra());
+        cout.width(6);  cout << pj[i];
+        cout.width(6);  cout << gan[i];
+        cout.width(6);  cout << emp[i];
+        cout.width(6);  cout << per[i];
+        cout.width(6);  cout << gf;
+        cout.width(6);  cout << gc;
+        cout.width(6);  cout << dif;
         cout.width(6);  cout << pts;
         cout << "\n";
     }
@@ -104,6 +133,9 @@ void verTablaGrupo(Mundial& m, bool grupos) {
 
 // ============================================================
 // OPCION 6: partidos de una fase
+// FIX: para la Fase de Grupos los partidos viven dentro de cada
+//      Grupo, no en el array partidos[] de la Fase.
+//      Se itera sobre los grupos y sus partidos directamente.
 // ============================================================
 void verPartidosFase(Mundial& m, bool torneo) {
     if (!torneo) { cout << "  [!] Primero debe simular el torneo (opcion 3).\n"; return; }
@@ -128,19 +160,43 @@ void verPartidosFase(Mundial& m, bool torneo) {
     if (!fase) { cout << "  [!] Fase no disponible.\n"; return; }
 
     cout << "\n  === " << fase->getNombre() << " ===\n";
-    cout << "  " << string(50, '-') << "\n";
-    for (int p = 0; p < fase->getCantPartidos(); p++) {
-        Partido* par = fase->getPartido(p);
-        if (!par) continue;
-        Resultado* res = par->getResultado();
-        cout << "  " << par->getEquipo1()->getPais();
-        if (res)
-            cout << "  " << res->getGfEquipo1() << " - " << res->getGfEquipo2();
-        else
-            cout << "  vs";
-        cout << "  " << par->getEquipo2()->getPais();
-        if (res && res->getHuboProrroga()) cout << "  (prorroga)";
-        cout << "\n";
+    cout << "  " << string(60, '-') << "\n";
+
+    // FIX: Fase de Grupos — iterar grupos y sus partidos internos
+    if (fase->getNombre() == "Fase de Grupos") {
+        for (int g = 0; g < fase->getCantGrupos(); g++) {
+            Grupo* gr = fase->getGrupo(g);
+            if (!gr) continue;
+            cout << "\n  -- Grupo " << gr->getLetra() << " --\n";
+            for (int p = 0; p < 6; p++) {
+                Partido* par = gr->getPartido(p);
+                if (!par) continue;
+                Resultado* res = par->getResultado();
+                cout << "  " << par->getFecha() << "  "
+                     << par->getEquipo1()->getPais();
+                if (res)
+                    cout << "  " << res->getGfEquipo1()
+                         << " - " << res->getGfEquipo2();
+                else
+                    cout << "  vs";
+                cout << "  " << par->getEquipo2()->getPais() << "\n";
+            }
+        }
+    } else {
+        // Fases eliminatorias — partidos directos en la fase
+        for (int p = 0; p < fase->getCantPartidos(); p++) {
+            Partido* par = fase->getPartido(p);
+            if (!par) continue;
+            Resultado* res = par->getResultado();
+            cout << "  " << par->getEquipo1()->getPais();
+            if (res)
+                cout << "  " << res->getGfEquipo1() << " - " << res->getGfEquipo2();
+            else
+                cout << "  vs";
+            cout << "  " << par->getEquipo2()->getPais();
+            if (res && res->getHuboProrroga()) cout << "  (prorroga)";
+            cout << "\n";
+        }
     }
 }
 

@@ -91,11 +91,9 @@ static Resultado* simularInterno(Equipo* equipo1, Equipo* equipo2,
     c2 = equipo2->seleccionarConvocados();
 
     float lambda1, lambda2;
-    // En prorroga usamos ranking directamente para no sesgar por estadisticas ya infladas
     if (forzarDesempate) {
-        lambda1 = lambda2 = 0.5f; // un gol extra se decide por ranking
+        lambda1 = lambda2 = 0.5f;
     } else {
-        // calcularGolesEsperados necesita metodos publicos: llamamos a traves del partido
         const float mu = 1.35f, alpha = 0.6f, beta = 0.4f;
         auto golesEsp = [&](Equipo* at, Equipo* def) -> float {
             int pjA = at->getPartidosJugados();
@@ -112,11 +110,8 @@ static Resultado* simularInterno(Equipo* equipo1, Equipo* equipo2,
 
     int gf1, gf2;
     if (forzarDesempate) {
-        // Un solo gol de diferencia decidido por ranking (menor = mejor)
         int r1 = equipo1->getRanking(), r2 = equipo2->getRanking();
         int umbral = (r1 + r2 > 0) ? (r2 * 100 / (r1 + r2)) : 50;
-        // base: mismo marcador que el partido normal (no lo conocemos aqui,
-        // asi que empezamos desde 0 para la prorroga y sumamos al total fuera)
         gf1 = 0; gf2 = 0;
         if ((rand() % 100) < umbral) gf1 = 1; else gf2 = 1;
     } else {
@@ -136,9 +131,12 @@ static Resultado* simularInterno(Equipo* equipo1, Equipo* equipo2,
 }
 
 void Partido::simular() {
-    Jugador *c1 = nullptr, *c2 = nullptr;
-    Jugador** pc1 = &c1; Jugador** pc2 = &c2; // no usamos lambdas aqui
-    // Llamada directa sin wrapper
+    // FIX: liberar resultado previo para evitar double-free si se llama dos veces
+    if (resultado) {
+        delete resultado;
+        resultado = nullptr;
+    }
+
     Jugador** conv1 = equipo1->seleccionarConvocados();
     Jugador** conv2 = equipo2->seleccionarConvocados();
 
@@ -159,14 +157,17 @@ void Partido::simular() {
     resultado->actualizarHistoricos(equipo1, equipo2);
     delete[] conv1;
     delete[] conv2;
-    (void)pc1; (void)pc2;
 }
 
-// FIX Bug 1: simularConProrroga ya no llama simular() internamente.
+// FIX: simularConProrroga no llama simular() internamente.
 // Hace todo en un solo flujo para evitar doble actualizacion de historicos.
-// FIX Bug 2: libera los arrays de convocados de la prorroga correctamente.
 void Partido::simularConProrroga() {
-    // --- Tiempo reglamentario ---
+    // FIX: liberar resultado previo para consistencia con simular()
+    if (resultado) {
+        delete resultado;
+        resultado = nullptr;
+    }
+
     Jugador** conv1 = equipo1->seleccionarConvocados();
     Jugador** conv2 = equipo2->seleccionarConvocados();
 
@@ -178,7 +179,6 @@ void Partido::simularConProrroga() {
     if (gf1 < 0) gf1 = 0;
     if (gf2 < 0) gf2 = 0;
 
-    // --- Prorroga si empate ---
     bool prorroga = (gf1 == gf2);
     if (prorroga) {
         int r1 = equipo1->getRanking(), r2 = equipo2->getRanking();
@@ -186,28 +186,28 @@ void Partido::simularConProrroga() {
         if ((rand() % 100) < umbral) gf1++; else gf2++;
     }
 
-    // Crear resultado final (unico) y actualizar historicos UNA sola vez
     resultado = new Resultado(gf1, gf2, prorroga, conv1, conv2);
-    // FIX Bug 3: posesion invertida -- menor ranking FIFA = mejor equipo.
-    // Equipo con menor ranking merece mas posesion, por eso usamos rankB / (rankA+rankB)
-    // donde rankB es el rival. Pero el calculo anterior ya era correcto conceptualmente;
-    // el error era que se interpretaba ranking alto = mejor. Ahora lo aclaramos:
-    // calcularPosesion(rankA, rankB) => posesionEq1 = rankB/(rankA+rankB)
-    // => si equipo1 tiene ranking 1 (mejor) y equipo2 tiene ranking 50,
-    //    posesion eq1 = 50/51 ≈ 0.98 → clampea a 0.65. Correcto: equipo mejor tiene mas posesion.
     resultado->calcularPosesion(equipo1->getRanking(), equipo2->getRanking());
     distribuirGoles(conv1, gf1, resultado, true);
     distribuirGoles(conv2, gf2, resultado, false);
     asignarTarjetasYFaltas(conv1);
     asignarTarjetasYFaltas(conv2);
-    // FIX Bug 1: actualizarHistoricos se llama UNA sola vez aqui
     resultado->actualizarHistoricos(equipo1, equipo2);
-    // FIX Bug 2: liberar los arrays de convocados (Resultado solo copia los punteros)
     delete[] conv1;
     delete[] conv2;
 }
 
 void Partido::imprimirResumen() {
+    // FIX: guards para equipo1/equipo2 y resultado nullptr
+    if (!equipo1 || !equipo2) return;
+    if (!resultado) {
+        cout << "\n=== Partido ===";
+        cout << "\nFecha: " << fecha << "  Hora: " << hora << "  Sede: " << sede;
+        cout << "\nArbitros: " << codsArbitros[0] << ", " << codsArbitros[1] << ", " << codsArbitros[2];
+        cout << "\n" << equipo1->getPais() << " vs " << equipo2->getPais() << " (Sin resultado)\n";
+        return;
+    }
+
     cout << "\n=== Partido ===";
     cout << "\nFecha: " << fecha << "  Hora: " << hora << "  Sede: " << sede;
     cout << "\nArbitros: " << codsArbitros[0] << ", " << codsArbitros[1] << ", " << codsArbitros[2];
@@ -223,8 +223,10 @@ void Partido::imprimirResumen() {
     cout << "\nGoleadores " << equipo1->getPais() << ": ";
     bool hayGol1 = false;
     for (int i = 0; i < 11; i++) {
-        if (resultado->getGolesPartido1(i) > 0) {
-            cout << resultado->getConvocados1()[i]->getNumeroCamiseta()
+        // FIX: guard para convocado nullptr antes de acceder a getNumeroCamiseta
+        Jugador* j = resultado->getConvocados1()[i];
+        if (j && resultado->getGolesPartido1(i) > 0) {
+            cout << j->getNumeroCamiseta()
                  << "(" << resultado->getGolesPartido1(i) << ") ";
             hayGol1 = true;
         }
@@ -234,8 +236,10 @@ void Partido::imprimirResumen() {
     cout << "\nGoleadores " << equipo2->getPais() << ": ";
     bool hayGol2 = false;
     for (int i = 0; i < 11; i++) {
-        if (resultado->getGolesPartido2(i) > 0) {
-            cout << resultado->getConvocados2()[i]->getNumeroCamiseta()
+        // FIX: guard para convocado nullptr
+        Jugador* j = resultado->getConvocados2()[i];
+        if (j && resultado->getGolesPartido2(i) > 0) {
+            cout << j->getNumeroCamiseta()
                  << "(" << resultado->getGolesPartido2(i) << ") ";
             hayGol2 = true;
         }
