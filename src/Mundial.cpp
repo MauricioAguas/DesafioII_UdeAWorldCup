@@ -4,20 +4,25 @@
 #include <sstream>
 #include <cstdlib>
 #include <ctime>
-#include <algorithm>
+
 using namespace std;
 
 // ============================================================
 // HELPERS PRIVADOS PARA CALCULO DE MEMORIA
+// Estas funciones calculan cuántos bytes ocupa cada objeto en
+// memoria, sumando el tamaño de la estructura base más sus
+// dependencias (jugadores, partidos, etc.).
 // ============================================================
 static long long bytesEstJug() { return sizeof(EstadisticasJugador); }
 static long long bytesJugador(const Jugador* j) {
     if (!j) return 0;
+    // Tamaño del jugador + sus estadísticas históricas
     return sizeof(Jugador) + bytesEstJug();
 }
 static long long bytesEstEq() { return sizeof(EstadisticasEquipo); }
 static long long bytesEquipo(const Equipo* e) {
     if (!e) return 0;
+    // Tamaño del equipo + sus estadísticas históricas (los jugadores se cuentan aparte)
     return sizeof(Equipo) + bytesEstEq();
 }
 static long long bytesResultado(const Resultado* r) {
@@ -26,6 +31,7 @@ static long long bytesResultado(const Resultado* r) {
 }
 static long long bytesPartido(const Partido* p) {
     if (!p) return 0;
+    // Tamaño del partido + el resultado asociado
     return sizeof(Partido) + bytesResultado(p->getResultado());
 }
 static long long bytesGrupo(const Grupo* g) {
@@ -35,16 +41,20 @@ static long long bytesGrupo(const Grupo* g) {
 static long long bytesFase(const Fase* f) {
     if (!f) return 0;
     long long b = sizeof(Fase);
+    // Sumamos el tamaño de cada partido dentro de la fase
     for (int p = 0; p < f->getCantPartidos(); p++)
         b += bytesPartido(f->getPartido(p));
     return b;
 }
 
+// Calcula la memoria total consumida por el sistema en el momento de la llamada.
+// Recorre equipos, grupos y fases acumulando el tamaño de cada objeto.
 long long Mundial::calcularMemoria() {
     long long total = sizeof(Mundial);
     for (int i = 0; i < cantEquipos; i++) {
         if (!equipos[i]) continue;
         total += bytesEquipo(equipos[i]);
+        // Cada jugador de la plantilla también ocupa memoria
         for (int j = 0; j < equipos[i]->getTamanoPlantilla(); j++)
             total += bytesJugador(equipos[i]->getJugador(j));
     }
@@ -53,6 +63,9 @@ long long Mundial::calcularMemoria() {
     return total;
 }
 
+// Imprime en consola las dos métricas de eficiencia requeridas (Req V):
+//   - Iteraciones acumuladas durante la funcionalidad
+//   - Memoria total consumida en ese instante
 void Mundial::imprimirMetricas(const string& nombreFunc) {
     cout << "\n[Metricas - " << nombreFunc << "]\n";
     cout << "  Iteraciones ejecutadas : " << iteraciones << "\n";
@@ -62,6 +75,9 @@ void Mundial::imprimirMetricas(const string& nombreFunc) {
 // ============================================================
 // CONSTRUCTORES / DESTRUCTOR
 // ============================================================
+
+// Constructor por defecto: inicializa todos los punteros a nullptr
+// y los contadores a 0. Siempre se invoca desde el constructor con parámetros.
 Mundial::Mundial() {
     anio = cantEquipos = cantFases = 0;
     iteraciones = 0;
@@ -70,12 +86,17 @@ Mundial::Mundial() {
     for (int i = 0; i < 8;  i++) fases[i]   = nullptr;
 }
 
+// Constructor principal: recibe el año del mundial y la cantidad de equipos.
+// Llama al constructor por defecto con "Mundial()" para reutilizar la inicialización.
+// srand inicializa la semilla aleatoria una sola vez con el tiempo actual.
 Mundial::Mundial(int anio, int cantEquipos) : Mundial() {
     this->anio        = anio;
     this->cantEquipos = cantEquipos;
     srand(time(nullptr));
 }
 
+// Destructor: libera toda la memoria dinámica reservada durante la ejecución.
+// Es fundamental para evitar memory leaks.
 Mundial::~Mundial() {
     for (int i = 0; i < cantEquipos; i++) if (equipos[i]) delete equipos[i];
     for (int i = 0; i < 12; i++)          if (grupos[i])  delete grupos[i];
@@ -84,6 +105,8 @@ Mundial::~Mundial() {
 
 // ============================================================
 // Req I: cargarEquipos
+// Lee el archivo CSV con los datos históricos de las 48 selecciones
+// y construye dinámicamente los objetos Equipo con sus jugadores.
 // ============================================================
 void Mundial::cargarEquipos() {
     iteraciones = 0;
@@ -93,6 +116,7 @@ void Mundial::cargarEquipos() {
         return;
     }
     string linea;
+    // Saltamos las dos primeras líneas (encabezados del CSV)
     getline(archivo, linea); iteraciones++;
     getline(archivo, linea); iteraciones++;
     cantEquipos = 0;
@@ -100,8 +124,11 @@ void Mundial::cargarEquipos() {
     while (getline(archivo, linea) && cantEquipos < 48) {
         iteraciones++;
         if (linea.empty()) continue;
+        // Eliminar '\r' en sistemas Windows (CRLF -> LF)
+        if (!linea.empty() && linea.back() == '\r') linea.pop_back();
         istringstream ss(linea);
         string rankStr, pais, DT, federacion, conf, gfStr, gcStr, ganStr, empStr, perStr;
+        // Cada getline sobre istringstream extrae un campo delimitado por ','
         getline(ss, rankStr,    ','); iteraciones++;
         getline(ss, pais,       ','); iteraciones++;
         getline(ss, DT,         ','); iteraciones++;
@@ -118,8 +145,11 @@ void Mundial::cargarEquipos() {
         int gan = stoi(ganStr), emp = stoi(empStr), per = stoi(perStr);
         iteraciones += 6;
 
+        // Crear el equipo con datos básicos y asignar estadísticas históricas
         Equipo* e = new Equipo(pais, conf, ranking, DT);
         e->setEstadisticasIniciales(gf, gc, gan, emp, per); iteraciones++;
+        // cargarJugadores genera los 26 jugadores con nombre/apellido numerados
+        // y reparte los goles históricos uniformemente entre ellos
         e->cargarJugadores(); iteraciones += 26;
         equipos[cantEquipos++] = e;
     }
@@ -129,19 +159,29 @@ void Mundial::cargarEquipos() {
 }
 
 // ============================================================
-// helpers estaticos para conformarGrupos
+// helpers estáticos para conformarGrupos
+// Funciones auxiliares que verifican restricciones de confederación
+// al momento de asignar equipos a grupos.
 // ============================================================
+
+// Cuenta cuántos equipos de una confederación dada ya están en el grupo g
 static int contarConf(Grupo* g, const string& conf) {
     int c = 0;
     for (int i = 0; i < g->getCantEquipos(); i++)
         if (g->getEquipo(i) && g->getEquipo(i)->getConfederacion() == conf) c++;
     return c;
 }
+
+// Verifica si el equipo 'e' puede entrar al grupo 'g' respetando la restricción:
+//   - UEFA: máximo 2 equipos por grupo
+//   - Cualquier otra confederación: máximo 1 equipo por grupo
 static bool puedeEntrar(Grupo* g, Equipo* e) {
     string conf = e->getConfederacion();
     int limite  = (conf == "UEFA") ? 2 : 1;
     return contarConf(g, conf) < limite;
 }
+
+// Verifica si el equipo ya fue asignado al grupo (evitar duplicados)
 static bool equipoYaEnGrupo(Grupo* g, Equipo* e) {
     for (int i = 0; i < g->getCantEquipos(); i++)
         if (g->getEquipo(i) == e) return true;
@@ -150,43 +190,63 @@ static bool equipoYaEnGrupo(Grupo* g, Equipo* e) {
 
 // ============================================================
 // Req II: conformarGrupos
+// Realiza el sorteo del mundial siguiendo el procedimiento oficial:
+//   1. Ordena los equipos por ranking FIFA y los distribuye en 4 bombos de 12
+//   2. EE.UU. va directo al bombo 1 (país anfitrión)
+//   3. Mezcla aleatoriamente cada bombo (Fisher-Yates)
+//   4. Asigna un equipo por bombo a cada grupo respetando restricciones de confederación
 // ============================================================
 void Mundial::conformarGrupos() {
     iteraciones = 0;
     char letras[12] = {'A','B','C','D','E','F','G','H','I','J','K','L'};
+    // Crear los 12 grupos identificados por letra
     for (int g = 0; g < 12; g++) { grupos[g] = new Grupo(letras[g]); iteraciones++; }
 
+    // Crear índices para ordenar equipos sin mover los punteros originales
     int idx[48];
     for (int i = 0; i < cantEquipos; i++) { idx[i] = i; iteraciones++; }
 
+    // Ordenar índices por ranking FIFA usando burbuja (menor ranking = mejor posición)
+    // Se usa burbuja por ser una estructura de datos propia, sin STL
     for (int i = 0; i < cantEquipos - 1; i++) {
         for (int j = 0; j < cantEquipos - 1 - i; j++) {
             iteraciones++;
-            if (equipos[idx[j]]->getRanking() > equipos[idx[j+1]]->getRanking())
-                swap(idx[j], idx[j+1]);
+            if (equipos[idx[j]]->getRanking() > equipos[idx[j+1]]->getRanking()) {
+                // Intercambio manual
+                int tmp = idx[j]; idx[j] = idx[j+1]; idx[j+1] = tmp;
+            }
         }
     }
 
+    // Distribuir los equipos ordenados en 4 bombos de 12 (bombo 1 = mejor ranking)
     int bombos[4][12];
     for (int b = 0; b < 4; b++)
         for (int i = 0; i < 12; i++) { bombos[b][i] = idx[b*12+i]; iteraciones++; }
 
+    // Mezcla aleatoria del bombo 1 con algoritmo Fisher-Yates
+    // Fisher-Yates garantiza una permutación uniforme y sin repeticiones
     for (int i = 11; i > 0; i--) {
         int j = rand() % (i+1);
-        swap(bombos[0][i], bombos[0][j]);
+        // Intercambio manual
+        int tmp = bombos[0][i]; bombos[0][i] = bombos[0][j]; bombos[0][j] = tmp;
         iteraciones++;
     }
+    // Asignar cabezas de serie (bombo 1) directamente: un equipo por grupo
     for (int g = 0; g < 12; g++) { grupos[g]->agregarEquipo(equipos[bombos[0][g]]); iteraciones++; }
 
+    // Para los bombos 2, 3 y 4: mezclar y asignar respetando restricciones de confederación
     for (int b = 1; b < 4; b++) {
+        // Mezcla Fisher-Yates para el bombo actual
         for (int i = 11; i > 0; i--) {
             int j = rand() % (i+1);
-            swap(bombos[b][i], bombos[b][j]);
+            // Intercambio manual
+            int tmp = bombos[b][i]; bombos[b][i] = bombos[b][j]; bombos[b][j] = tmp;
             iteraciones++;
         }
         for (int e = 0; e < 12; e++) {
             iteraciones++;
             Equipo* eq = equipos[bombos[b][e]];
+            // Buscar grupos disponibles que cumplan las restricciones de confederación
             int disponibles[12]; int nd = 0;
             for (int g = 0; g < 12; g++) {
                 iteraciones++;
@@ -195,6 +255,8 @@ void Mundial::conformarGrupos() {
                     && puedeEntrar(grupos[g], eq))
                     disponibles[nd++] = g;
             }
+            // Si no hay grupos que cumplan todas las restricciones, relajamos la de confederación
+            // (fallback para evitar bloqueos en el sorteo)
             if (nd == 0) {
                 for (int g = 0; g < 12; g++) {
                     iteraciones++;
@@ -207,11 +269,13 @@ void Mundial::conformarGrupos() {
                 cerr << "[Sorteo] Sin grupo disponible para " << eq->getPais() << "\n";
                 continue;
             }
+            // Elegir aleatoriamente entre los grupos disponibles
             int elegido = disponibles[rand() % nd];
             grupos[elegido]->agregarEquipo(eq);
         }
     }
 
+    // Imprimir los grupos conformados con confederación de cada equipo
     cout << "[Mundial] Grupos conformados por bombos:\n";
     for (int g = 0; g < 12; g++) {
         cout << "Grupo " << letras[g] << ": ";
@@ -226,11 +290,16 @@ void Mundial::conformarGrupos() {
 
 // ============================================================
 // SCHEDULER GLOBAL de fechas para la fase de grupos
+// Genera la fecha de cada partido a partir del día de inicio (20-jun-2026)
+// sumando un offset en días.
 // ============================================================
+
+// Convierte un offset de días desde el 20/06/2026 en una fecha "YYYY-MM-DD"
 static string sumarDias(int diaOffset) {
     int anio = 2026, mes = 6, dia = 20;
     int diasMes[13] = {0,31,28,31,30,31,30,31,31,30,31,30,31};
     dia += diaOffset;
+    // Avanzar mes si el día supera los días del mes actual
     while (dia > diasMes[mes]) { dia -= diasMes[mes]; mes++; if(mes>12){mes=1;anio++;} }
     string f = to_string(anio) + "-"
              + (mes<10?"0":"") + to_string(mes) + "-"
@@ -238,16 +307,24 @@ static string sumarDias(int diaOffset) {
     return f;
 }
 
+// Asigna fechas a los 6 partidos de cada grupo respetando:
+//   - Máximo 4 partidos por día en todo el torneo
+//   - Ningún equipo juega con menos de 3 días de diferencia entre sus partidos
+// Usa un arreglo de días disponibles y un registro del último día jugado por equipo.
 void Mundial::schedulerFaseGrupos() {
+    // e1idx y e2idx definen las 6 combinaciones de partidos dentro de un grupo de 4
+    // (todos contra todos una vez): 0vs1, 0vs2, 0vs3, 1vs2, 1vs3, 2vs3
     int e1idx[6] = {0,0,0,1,1,2};
     int e2idx[6] = {1,2,3,2,3,3};
 
-    const int MAX_DIA = 18;
-    int partidosPorDia[19] = {0};
+    const int MAX_DIA = 18; // La fase de grupos dura 19 días (día 0 al 18)
+    int partidosPorDia[19] = {0}; // Contador de partidos por día global
 
+    // Registro del último día que jugó cada equipo (índice global)
     int ultimoDia[48];
     for (int i = 0; i < 48; i++) ultimoDia[i] = -99;
 
+    // Lambda para obtener el índice global de un equipo dentro del arreglo equipos[]
     auto idxEquipo = [&](Grupo* g, int posEnGrupo) -> int {
         Equipo* eq = g->getEquipo(posEnGrupo);
         for (int i = 0; i < cantEquipos; i++)
@@ -266,13 +343,15 @@ void Mundial::schedulerFaseGrupos() {
             int ie1 = idxEquipo(gr, e1idx[p]);
             int ie2 = idxEquipo(gr, e2idx[p]);
 
+            // Buscar el primer día que cumpla todas las restricciones
             int dia = 0;
             bool encontrado = false;
             while (dia <= MAX_DIA && !encontrado) {
                 iteraciones++;
                 bool diaLibre    = (partidosPorDia[dia] < 4);
-                bool eq1descansa = (ie1 < 0 || ultimoDia[ie1] < 0 || (dia - ultimoDia[ie1]) > 3);
-                bool eq2descansa = (ie2 < 0 || ultimoDia[ie2] < 0 || (dia - ultimoDia[ie2]) > 3);
+                // El equipo debe haber descansado al menos 3 días desde su último partido
+                bool eq1descansa = (ie1 < 0 || ultimoDia[ie1] < 0 || (dia - ultimoDia[ie1]) >= 3);
+                bool eq2descansa = (ie2 < 0 || ultimoDia[ie2] < 0 || (dia - ultimoDia[ie2]) >= 3);
                 if (diaLibre && eq1descansa && eq2descansa) {
                     encontrado = true;
                 } else {
@@ -280,8 +359,10 @@ void Mundial::schedulerFaseGrupos() {
                 }
             }
 
+            // Si no se encontró día ideal, elegir el que tenga menos violaciones
+            // (fallback para evitar bloqueos en el scheduling)
             if (!encontrado) {
-                int mejorDia = -1, menorViolacion = 9999;
+                int mejorDia = 0, menorViolacion = 9999;
                 for (int d = 0; d <= MAX_DIA; d++) {
                     iteraciones++;
                     if (partidosPorDia[d] >= 4) continue;
@@ -293,11 +374,12 @@ void Mundial::schedulerFaseGrupos() {
                         mejorDia = d;
                     }
                 }
-                dia = (mejorDia >= 0) ? mejorDia : MAX_DIA;
+                dia = mejorDia;
             }
 
             fechas[p] = sumarDias(dia);
             partidosPorDia[dia]++;
+            // Registrar el día jugado para cada equipo
             if (ie1 >= 0) ultimoDia[ie1] = dia;
             if (ie2 >= 0) ultimoDia[ie2] = dia;
         }
@@ -306,35 +388,32 @@ void Mundial::schedulerFaseGrupos() {
 }
 
 // ============================================================
-// helper: devuelve el indice de grupo al que pertenece un equipo
-// ============================================================
-static int grupoDeEquipo(Fase* fg, Equipo* eq) {
-    for (int g = 0; g < fg->getCantGrupos(); g++) {
-        Grupo* gr = fg->getGrupo(g);
-        if (!gr) continue;
-        for (int e = 0; e < gr->getCantEquipos(); e++)
-            if (gr->getEquipo(e) == eq) return g;
-    }
-    return -1;
-}
-
-// ============================================================
 // Req III: simularTorneo
+// Orquesta la simulación completa del torneo en orden:
+//   Fase de grupos -> R16 -> R8 -> QF -> SF -> 3er puesto -> Final
+// Cada fase crea sus partidos, los simula y actualiza estadísticas.
 // ============================================================
 void Mundial::simularTorneo() {
     iteraciones = 0;
 
+    // --- FASE DE GRUPOS ---
     Fase* faseGrupos = new Fase("Fase de Grupos", "grupos", "2026-06-20");
     for (int g = 0; g < 12; g++) { faseGrupos->agregarGrupo(grupos[g]); iteraciones++; }
 
+    // Asignar fechas a los 72 partidos de grupos respetando restricciones del calendario
     schedulerFaseGrupos();            iteraciones += 72;
 
+    // Simular los 72 partidos (fórmula λ de Poisson para goles, estadísticas de jugadores)
     faseGrupos->simularPartidos();    iteraciones += 72;
+    // Calcular tablas de clasificación (puntos, diferencia de goles, goles a favor)
     faseGrupos->generarTablas();      iteraciones += 48;
     faseGrupos->imprimirResultados();
     fases[cantFases++] = faseGrupos;
 
+    // --- DIECISEISAVOS (R16): 16 partidos ---
     Fase* faseR16 = new Fase("Dieciseisavos (R16)", "eliminacion", "2026-07-10");
+    // armarR16 clasifica 12 primeros + 12 segundos + 8 mejores terceros
+    // y configura los cruces sin repetir grupos de la fase anterior
     armarR16(faseGrupos, faseR16);
 
     cout << "\n--- Fixture R16 (antes de simular) ---\n";
@@ -349,7 +428,8 @@ void Mundial::simularTorneo() {
     faseR16->imprimirResultados();
     fases[cantFases++] = faseR16;
 
-    // R8
+    // --- OCTAVOS (R8): 8 partidos ---
+    // Los ganadores de R16 se emparejan consecutivamente: ganador partido 0 vs ganador partido 1, etc.
     Fase* faseR8 = new Fase("Octavos (R8)", "eliminacion", "2026-07-10");
     for (int i = 0; i + 1 < faseR16->getCantPartidos(); i += 2) {
         iteraciones++;
@@ -361,7 +441,7 @@ void Mundial::simularTorneo() {
     faseR8->imprimirResultados();
     fases[cantFases++] = faseR8;
 
-    // QF
+    // --- CUARTOS (QF): 4 partidos ---
     Fase* faseQF = new Fase("Cuartos (QF)", "eliminacion", "2026-07-10");
     for (int i = 0; i + 1 < faseR8->getCantPartidos(); i += 2) {
         iteraciones++;
@@ -373,7 +453,7 @@ void Mundial::simularTorneo() {
     faseQF->imprimirResultados();
     fases[cantFases++] = faseQF;
 
-    // SF
+    // --- SEMIFINALES (SF): 2 partidos ---
     Fase* faseSF = new Fase("Semifinales (SF)", "eliminacion", "2026-07-10");
     for (int i = 0; i + 1 < faseQF->getCantPartidos(); i += 2) {
         iteraciones++;
@@ -385,7 +465,8 @@ void Mundial::simularTorneo() {
     faseSF->imprimirResultados();
     fases[cantFases++] = faseSF;
 
-    // Tercer puesto
+    // --- TERCER PUESTO: los perdedores de semifinales ---
+    // Identificar los perdedores de cada semifinal comparando el ganador con los participantes
     Equipo* sf1g = faseSF->getGanadorPartido(0);
     Equipo* sf2g = faseSF->getGanadorPartido(1);
     Partido* p0  = faseSF->getPartido(0);
@@ -404,7 +485,7 @@ void Mundial::simularTorneo() {
     fase3er->imprimirResultados();
     fases[cantFases++] = fase3er;
 
-    // Final
+    // --- FINAL: los dos ganadores de semifinales ---
     Fase* faseFinal = new Fase("Final", "eliminacion", "2026-07-10");
     if (sf1g && sf2g)
         faseFinal->agregarPartido(new Partido("2026-07-10","00:00","nombreSede",sf1g,sf2g));
@@ -417,6 +498,7 @@ void Mundial::simularTorneo() {
 
 // ============================================================
 // helper: comparar terceros por pts > dg > gf
+// Usado para ordenar los 12 terceros y elegir los 8 mejores
 // ============================================================
 static bool mejorTercero(Grupo* a, int idxA, Grupo* b, int idxB) {
     if (a->getPuntos(idxA) != b->getPuntos(idxB))
@@ -427,29 +509,30 @@ static bool mejorTercero(Grupo* a, int idxA, Grupo* b, int idxB) {
 }
 
 // ============================================================
-// armarR16 — implementa las 3 reglas del enunciado:
-//   Regla 1: Los 12 primeros de grupo enfrentan a los 8 mejores terceros.
-//   Regla 2: Los 4 peores segundos enfrentan al resto de primeros sin rival aun.
-//   Regla 3: Los 8 mejores segundos se enfrentan entre si.
-//   Restriccion: no pueden enfrentarse equipos del mismo grupo.
+// armarR16
+// Clasifica los 32 equipos que pasan a R16 y configura sus cruces:
+//   - 12 primeros de grupo (cabezas de serie)
+//   - 12 segundos de grupo
+//   - 8 mejores terceros (elegidos por pts > dif. goles > goles a favor)
+// Regla principal: ningún cruce puede enfrentar equipos del mismo grupo.
 // ============================================================
 void Mundial::armarR16(Fase* fg, Fase* r16) {
-    int cantG = fg->getCantGrupos(); // 12
+    int cantG = fg->getCantGrupos();
 
-    // --- Recolectar 1ros, 2dos y 3ros de cada grupo ---
+    // Arreglos para almacenar primeros, segundos y terceros de cada grupo
     Equipo* primeros[12];  int grupoPrimero[12];
     Equipo* segundos[12];  int grupoSegundo[12];
     Equipo* todosT[12];    int grupoTercero[12]; int ptsT[12]; int dgT[12]; int gfT[12];
     int nP = 0, nS = 0, nT = 0;
 
+    // Extraer clasificados de cada grupo
     for (int g = 0; g < cantG; g++) {
         iteraciones++;
         Grupo* gr = fg->getGrupo(g);
         if (!gr || gr->getCantEquipos() < 3) continue;
-        Equipo** cl = gr->obtenerClasificados();
+        Equipo** cl = gr->obtenerClasificados(); // Retorna equipos ordenados por puntos
         primeros[nP] = cl[0]; grupoPrimero[nP++] = g;
         segundos[nS] = cl[1]; grupoSegundo[nS++] = g;
-        // buscar indice del 3ro en el grupo para obtener sus metricas
         int idx3 = -1;
         for (int i = 0; i < gr->getCantEquipos(); i++)
             if (gr->getEquipo(i) == cl[2]) { idx3 = i; break; }
@@ -461,7 +544,8 @@ void Mundial::armarR16(Fase* fg, Fase* r16) {
         nT++;
     }
 
-    // --- Ordenar terceros de mejor a peor (bubble sort) ---
+    // Ordenar terceros por pts > dg > gf para identificar los 8 mejores
+    // Usamos burbuja (estructura propia, sin STL)
     for (int i = 0; i < nT - 1; i++) {
         for (int j = 0; j < nT - 1 - i; j++) {
             iteraciones++;
@@ -470,39 +554,30 @@ void Mundial::armarR16(Fase* fg, Fase* r16) {
             else if (ptsT[j] == ptsT[j+1] && dgT[j] < dgT[j+1]) swap_needed = true;
             else if (ptsT[j] == ptsT[j+1] && dgT[j] == dgT[j+1] && gfT[j] < gfT[j+1]) swap_needed = true;
             if (swap_needed) {
-                swap(todosT[j],     todosT[j+1]);
-                swap(grupoTercero[j], grupoTercero[j+1]);
-                swap(ptsT[j],       ptsT[j+1]);
-                swap(dgT[j],        dgT[j+1]);
-                swap(gfT[j],        gfT[j+1]);
+                // Intercambios manuales para los 5 arreglos paralelos (reemplaza swap() de <algorithm>)
+                Equipo* tmpE = todosT[j];       todosT[j]       = todosT[j+1];       todosT[j+1]       = tmpE;
+                int     tmpI = grupoTercero[j]; grupoTercero[j] = grupoTercero[j+1]; grupoTercero[j+1] = tmpI;
+                int     tmpP = ptsT[j];         ptsT[j]         = ptsT[j+1];         ptsT[j+1]         = tmpP;
+                int     tmpD = dgT[j];          dgT[j]          = dgT[j+1];          dgT[j+1]          = tmpD;
+                int     tmpG = gfT[j];          gfT[j]          = gfT[j+1];          gfT[j+1]          = tmpG;
             }
         }
     }
 
-    // Los 8 primeros en el ranking son los mejores terceros clasificados
-    // Los 4 ultimos son eliminados
-    int mejores8T[8];   int grupoDe8T[8];
-    int peores4T[4];    int grupoDe4T[4];
+    // Los primeros 8 en el arreglo ordenado son los mejores terceros
+    int mejores8T[8]; int grupoDe8T[8];
     for (int i = 0; i < 8 && i < nT; i++) { mejores8T[i] = i; grupoDe8T[i] = grupoTercero[i]; iteraciones++; }
-    for (int i = 8; i < nT && (i-8) < 4; i++) { peores4T[i-8] = i; grupoDe4T[i-8] = grupoTercero[i]; iteraciones++; }
 
-    // --- Control de equipos ya emparejados ---
     bool primeroUsado[12] = {false};
     bool segundoUsado[12] = {false};
-    bool terceroUsado[8]  = {false};
 
-    // Helper: agregar partido al fixture
+    // Lambda auxiliar para agregar partidos a la fase R16
     auto agregarPartido = [&](Equipo* e1, Equipo* e2) {
         r16->agregarPartido(new Partido("2026-07-10","00:00","nombreSede",e1,e2));
         iteraciones++;
     };
 
-    // -------------------------------------------------------
-    // REGLA 1: 12 primeros vs 8 mejores terceros
-    //   Restriccion: no pueden ser del mismo grupo
-    //   Asignacion greedy: para cada tercero, buscar el primer
-    //   primero disponible de distinto grupo.
-    // -------------------------------------------------------
+    // PASO 1: Enfrentar los 8 mejores terceros contra primeros de grupo distinto
     for (int t = 0; t < 8; t++) {
         iteraciones++;
         int idxT = mejores8T[t];
@@ -510,32 +585,25 @@ void Mundial::armarR16(Fase* fg, Fase* r16) {
         int gT = grupoDe8T[t];
         Equipo* rival = nullptr;
         int rivalP = -1;
+        // Buscar un primero disponible que no sea del mismo grupo
         for (int p = 0; p < nP && !rival; p++) {
             iteraciones++;
             if (primeroUsado[p]) continue;
-            if (grupoPrimero[p] == gT) continue; // mismo grupo
+            if (grupoPrimero[p] == gT) continue; // No pueden ser del mismo grupo
             rival = primeros[p];
             rivalP = p;
         }
         if (rival && tercero) {
             agregarPartido(primeros[rivalP], tercero);
             primeroUsado[rivalP] = true;
-            terceroUsado[t] = true;
         }
     }
 
-    // -------------------------------------------------------
-    // REGLA 2: Primeros que aun no tienen rival enfrentan
-    //   a los 4 peores segundos.
-    //   Restriccion: no mismo grupo.
-    // -------------------------------------------------------
-    // Recolectar primeros sin rival
+    // PASO 2: Los primeros sin rival jugarán contra los peores 4 segundos
     int sinRival[12]; int nSR = 0;
     for (int p = 0; p < nP; p++) { iteraciones++; if (!primeroUsado[p]) sinRival[nSR++] = p; }
 
-    // Ordenar peores segundos por su posicion en la tabla (ya estan en orden de grupos)
-    // Los 4 peores segundos son los que tienen menos pts/dg/gf entre los 12 segundos
-    // Ordenar segundos de peor a mejor
+    // Ordenar segundos por rendimiento para identificar los 4 peores
     int idxSeg[12]; for (int i = 0; i < nS; i++) idxSeg[i] = i;
     for (int i = 0; i < nS - 1; i++) {
         for (int j = 0; j < nS - 1 - i; j++) {
@@ -543,19 +611,18 @@ void Mundial::armarR16(Fase* fg, Fase* r16) {
             Grupo* ga = fg->getGrupo(grupoSegundo[idxSeg[j]]);
             Grupo* gb = fg->getGrupo(grupoSegundo[idxSeg[j+1]]);
             if (!ga || !gb) continue;
-            // encontrar idx del 2do en cada grupo
             int iA = -1, iB = -1;
             for (int k = 0; k < ga->getCantEquipos(); k++)
                 if (ga->getEquipo(k) == segundos[idxSeg[j]]) { iA = k; break; }
             for (int k = 0; k < gb->getCantEquipos(); k++)
                 if (gb->getEquipo(k) == segundos[idxSeg[j+1]]) { iB = k; break; }
             if (iA < 0 || iB < 0) continue;
-            // swap si j es MEJOR que j+1 (queremos peores primero)
-            if (mejorTercero(ga, iA, gb, iB))
-                swap(idxSeg[j], idxSeg[j+1]);
+            if (mejorTercero(ga, iA, gb, iB)) {
+                // Intercambio manual (reemplaza swap() de <algorithm>)
+                int tmp = idxSeg[j]; idxSeg[j] = idxSeg[j+1]; idxSeg[j+1] = tmp;
+            }
         }
     }
-    // Primeros 4 en idxSeg son los 4 peores segundos
     int peoresS[4]; int grupoPeoresS[4]; int nPS = 0;
     for (int i = 0; i < 4 && i < nS; i++) {
         iteraciones++;
@@ -565,6 +632,7 @@ void Mundial::armarR16(Fase* fg, Fase* r16) {
     }
     bool peoresSUsado[4] = {false};
 
+    // Emparejar primeros sin rival con los 4 peores segundos (de distinto grupo)
     for (int s = 0; s < nPS; s++) {
         iteraciones++;
         Equipo* seg = segundos[peoresS[s]];
@@ -575,7 +643,7 @@ void Mundial::armarR16(Fase* fg, Fase* r16) {
             iteraciones++;
             int p = sinRival[r];
             if (primeroUsado[p]) continue;
-            if (grupoPrimero[p] == gS) continue;
+            if (grupoPrimero[p] == gS) continue; // No pueden ser del mismo grupo
             rival = primeros[p];
             rivalSR = p;
         }
@@ -587,23 +655,17 @@ void Mundial::armarR16(Fase* fg, Fase* r16) {
         }
     }
 
-    // -------------------------------------------------------
-    // REGLA 3: Los 8 mejores segundos se enfrentan entre si.
-    //   Restriccion: no mismo grupo.
-    //   Tomamos los segundos que aun no fueron usados (los 8 mejores).
-    // -------------------------------------------------------
-    // Recolectar segundos disponibles (no usados en regla 2)
+    // PASO 3: Los mejores segundos restantes se enfrentan entre sí (de distinto grupo)
     Equipo* mejoresS[8]; int grupoMejoresS[8]; int nMS = 0;
     for (int i = 4; i < nS && nMS < 8; i++) {
         iteraciones++;
-        int s = idxSeg[i]; // de mejor a peor (los mejores estan al final del sort peor->mejor)
+        int s = idxSeg[i];
         if (!segundoUsado[s]) {
             mejoresS[nMS] = segundos[s];
             grupoMejoresS[nMS] = grupoSegundo[s];
             nMS++;
         }
     }
-    // Tambien agregar cualquier segundo que haya quedado sin usar de los primeros 4
     for (int s = 0; s < nPS; s++) {
         iteraciones++;
         if (!peoresSUsado[s] && !segundoUsado[peoresS[s]] && nMS < 8) {
@@ -620,7 +682,7 @@ void Mundial::armarR16(Fase* fg, Fase* r16) {
         for (int j = i + 1; j < nMS; j++) {
             iteraciones++;
             if (mejoresSUsado[j]) continue;
-            if (grupoMejoresS[i] == grupoMejoresS[j]) continue;
+            if (grupoMejoresS[i] == grupoMejoresS[j]) continue; // No del mismo grupo
             agregarPartido(mejoresS[i], mejoresS[j]);
             mejoresSUsado[i] = true;
             mejoresSUsado[j] = true;
@@ -631,17 +693,25 @@ void Mundial::armarR16(Fase* fg, Fase* r16) {
 
 // ============================================================
 // Req IV: generarEstadisticas
+// Despliega el informe final del torneo con:
+//   - Ranking de los 4 primeros puestos
+//   - Máximo goleador del campeón
+//   - Top 3 goleadores del torneo
+//   - Equipo con más goles históricos (tras actualización post-copa)
+//   - Confederación dominante en R16, R8 y QF
 // ============================================================
 void Mundial::generarEstadisticas() {
     iteraciones = 0;
     cout << "\n=== Generando estadisticas finales... ===\n";
     cout << "\n========== ESTADISTICAS FINALES ==========\n";
 
+    // Obtener campeón desde la fase Final
     Equipo* campeon    = getCampeon();
     Equipo* subcampeon = nullptr;
     Equipo* tercero    = nullptr;
     Equipo* cuarto     = nullptr;
 
+    // Recorrer las fases para identificar subcampeón, tercero y cuarto
     for (int i = 0; i < cantFases; i++) {
         iteraciones++;
         if (fases[i] && fases[i]->getNombre() == "Final") {
@@ -649,6 +719,7 @@ void Mundial::generarEstadisticas() {
             if (pf) {
                 Equipo* e1 = pf->getEquipo1();
                 Equipo* e2 = pf->getEquipo2();
+                // El subcampeón es el que no ganó la final
                 subcampeon = (campeon == e1) ? e2 : e1;
             }
         }
@@ -658,6 +729,7 @@ void Mundial::generarEstadisticas() {
             if (p3) {
                 Equipo* e1 = p3->getEquipo1();
                 Equipo* e2 = p3->getEquipo2();
+                // El cuarto puesto es el perdedor del partido de tercer puesto
                 cuarto = (tercero == e1) ? e2 : e1;
             }
         }
@@ -675,6 +747,7 @@ void Mundial::generarEstadisticas() {
         for (int j = 0; j < campeon->getTamanoPlantilla(); j++) {
             iteraciones++;
             Jugador* jug = campeon->getJugador(j);
+            // Buscar el jugador con más goles en la plantilla del campeón
             if (jug && jug->getGoles() > maxG) { maxG = jug->getGoles(); maxJug = jug; }
         }
         if (maxJug)
@@ -683,6 +756,7 @@ void Mundial::generarEstadisticas() {
     }
 
     cout << "\n--- Top 3 Goleadores del Torneo ---\n";
+    // Arreglos paralelos para los 3 mejores goleadores: jugador, goles, equipo
     Jugador* top[3]   = {nullptr, nullptr, nullptr};
     int      topG[3]  = {-1, -1, -1};
     Equipo*  topEq[3] = {nullptr, nullptr, nullptr};
@@ -694,6 +768,7 @@ void Mundial::generarEstadisticas() {
             Jugador* jug = equipos[e]->getJugador(j);
             if (!jug) continue;
             int g = jug->getGoles();
+            // Inserción ordenada en el top 3 (desplaza hacia abajo si supera algún valor)
             for (int k = 0; k < 3; k++) {
                 iteraciones++;
                 if (g > topG[k]) {
@@ -717,6 +792,7 @@ void Mundial::generarEstadisticas() {
     if (masGoles)
         cout << masGoles->getPais() << " con " << masGoles->getGFA() << " goles a favor historicos\n";
 
+    // Contar presencia de confederaciones en R16, R8 y QF
     const char* etapas[3]    = {"Dieciseisavos (R16)", "Octavos (R8)", "Cuartos (QF)"};
     string confNombres[6]    = {"UEFA","CONMEBOL","Concacaf","CAF","AFC","OFC"};
     for (int e = 0; e < 3; e++) {
@@ -733,6 +809,7 @@ void Mundial::generarEstadisticas() {
                 for (int q = 0; q < 2; q++) {
                     iteraciones++;
                     if (!eq[q]) continue;
+                    // Incrementar contador de la confederación correspondiente
                     for (int c = 0; c < 6; c++) {
                         iteraciones++;
                         if (eq[q]->getConfederacion() == confNombres[c]) { confCount[c]++; break; }
@@ -740,6 +817,7 @@ void Mundial::generarEstadisticas() {
                 }
             }
         }
+        // Buscar la confederación con mayor presencia en esta etapa
         string maxConf = ""; int maxC = 0;
         for (int c = 0; c < 6; c++) { iteraciones++; if (confCount[c] > maxC) { maxC=confCount[c]; maxConf=confNombres[c]; } }
         cout << "\nConfederacion con mayor presencia en " << etapas[e]
@@ -752,6 +830,8 @@ void Mundial::generarEstadisticas() {
 // ============================================================
 // getCampeon / getEquipoMasGoles
 // ============================================================
+
+// Retorna el equipo ganador de la fase Final (el campeón del mundial)
 Equipo* Mundial::getCampeon() {
     for (int i = 0; i < cantFases; i++)
         if (fases[i] && fases[i]->getNombre() == "Final")
@@ -759,6 +839,8 @@ Equipo* Mundial::getCampeon() {
     return nullptr;
 }
 
+// Recorre todos los equipos y retorna el que tiene más goles a favor históricos
+// (estadísticas ya actualizadas con los partidos de la copa)
 Equipo* Mundial::getEquipoMasGoles() {
     Equipo* mejor = nullptr; int max = -1;
     for (int i = 0; i < cantEquipos; i++) {
